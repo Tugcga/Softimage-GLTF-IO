@@ -60,7 +60,8 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 	//import_gltf(file_path);
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\cube_and_plane_01.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BrainStem.gltf");
-	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Duck.gltf");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoxVertexColors.gltf");
+	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoomBox.gltf");
 
 	return XSI::CStatus::OK;
 }

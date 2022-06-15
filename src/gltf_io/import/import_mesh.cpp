@@ -20,16 +20,57 @@
 std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive)
 {
 	const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
+	int component_type = polygon_accessor.componentType;
 
 	std::vector<LONG> to_return(polygon_accessor.count);
 
 	const tinygltf::BufferView& buffer_view = model.bufferViews[polygon_accessor.bufferView];
 	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
 
-	const unsigned short* positions = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-	for (size_t i = 0; i < polygon_accessor.count; ++i)
+	if (component_type == 5123)
 	{
-		to_return[i] = positions[i];
+		const unsigned short* polygons = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+		for (size_t i = 0; i < polygon_accessor.count; ++i)
+		{
+			to_return[i] = polygons[i];
+		}
+	}
+	else if (component_type == 5120)
+	{
+		const signed char* polygons = reinterpret_cast<const signed char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+		for (size_t i = 0; i < polygon_accessor.count; ++i)
+		{
+			to_return[i] = polygons[i];
+		}
+	}
+	else if (component_type == 5121)
+	{
+		const unsigned char* polygons = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+		for (size_t i = 0; i < polygon_accessor.count; ++i)
+		{
+			to_return[i] = polygons[i];
+		}
+	}
+	else if (component_type == 5122)
+	{
+		const signed short* polygons = reinterpret_cast<const signed short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+		for (size_t i = 0; i < polygon_accessor.count; ++i)
+		{
+			to_return[i] = polygons[i];
+		}
+	}
+	else if (component_type == 5125)
+	{
+		const unsigned int* polygons = reinterpret_cast<const unsigned int*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+		for (size_t i = 0; i < polygon_accessor.count; ++i)
+		{
+			to_return[i] = polygons[i];
+		}
+	}
+	else
+	{
+		std::vector<LONG> empty(0);
+		return empty;
 	}
 
 	return to_return;
@@ -38,26 +79,67 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 std::vector<float> get_float_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
 {
 	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
+	int component_type = accessor.componentType;
 
 	std::vector<float> to_return(components * accessor.count);
 
 	const tinygltf::BufferView& buffer_view = model.bufferViews[accessor.bufferView];
 	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
-	const float* positions = reinterpret_cast<const float*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-	for (size_t i = 0; i < accessor.count; ++i)
+
+	if (component_type == 5126)
 	{
-		for (int32_t c = 0; c < components; c++)
+		const float* data = reinterpret_cast<const float*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
+		for (size_t i = 0; i < accessor.count; ++i)
 		{
-			to_return[components * i + c] = positions[i * components + c];
+			for (int32_t c = 0; c < components; c++)
+			{
+				to_return[components * i + c] = data[i * components + c];
+			}
 		}
 	}
-
+	else if (component_type == 5121)
+	{
+		const unsigned char* data = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
+		for (size_t i = 0; i < accessor.count; ++i)
+		{
+			for (int32_t c = 0; c < components; c++)
+			{
+				to_return[components * i + c] = data[i * components + c];
+			}
+		}
+	}
+	else if (component_type == 5123)
+	{
+		const unsigned short* data = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
+		for (size_t i = 0; i < accessor.count; ++i)
+		{
+			for (int32_t c = 0; c < components; c++)
+			{
+				to_return[components * i + c] = data[i * components + c];
+			}
+		}
+	}
+	else
+	{
+		std::vector<float> empty(0);
+		return empty;
+	}
+	
 	return to_return;
 }
 
 std::vector<double> get_double_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
 {
 	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
+
+	int component_type = accessor.componentType;
+	if (component_type != 5126)
+	{
+		// this buffer should contains float values, but it actual contains something different
+		// return empty array
+		std::vector<double> empty(0);
+		return empty;
+	}
 
 	std::vector<double> to_return(components * accessor.count);
 
@@ -96,7 +178,6 @@ int get_closest_index(const std::vector<double> &positions, const double x, cons
 XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &mesh, const XSI::CString& object_name, const XSI::MATH::CTransformation &object_tfm, XSI::X3DObject &parent_object, const ImportMeshOptions& options)
 {
 	XSI::X3DObject object;
-	log_message("import the mesh " + XSI::CString(mesh.name.c_str()));
 	for (size_t primitive_index = 0; primitive_index < mesh.primitives.size(); primitive_index++)
 	{
 		tinygltf::Primitive primitive = mesh.primitives[primitive_index];
@@ -105,6 +186,11 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 		int position_attr_index = primitive.attributes["POSITION"];
 		const tinygltf::Accessor& position_accessor = model.accessors[position_attr_index];
 		std::vector<double> positions = get_double_buffer(model, position_accessor);
+		if (positions.size() == 0)
+		{
+			//something wrong here, because buffer with point positions is empty (the type of data is not float)
+			continue;
+		}
 
 		//proces vertices
 		std::unordered_map<ULONG, ULONG> vertices_map;  // key - old vertex index, value - new vertex index
@@ -145,6 +231,12 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 		ULONG samples_count = polygons.size();
 		std::vector<LONG> polygon_sizes(triangles_count, 3);
 
+		if (polygons.size() == 0)
+		{
+			// skip the mesh, because polygon indices buffer has invalid data type
+			continue;
+		}
+
 		//create the mesh
 		XSI::X3DObject xsi_object;
 		XSI::CMeshBuilder mesh_builder;
@@ -179,6 +271,11 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			if (attribute.first.compare("NORMAL") == 0)
 			{
 				std::vector<float> normals = get_float_buffer(model, accessor);
+				if (normals.size() == 0)
+				{
+					// there are no valid normal data
+					continue;
+				}
 				//from gltf we obtain normal for each vertex
 				//but in Softimage we should set the normal for each polygon corner - sample
 				//so, we should convert per-point array t per-sample array
@@ -196,6 +293,11 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			else if (attribute.first.find("TEXCOORD") == 0)
 			{
 				std::vector<float> uvs = get_float_buffer(model, accessor);
+				if (uvs.size() == 0)
+				{
+					// there are no valid uvs data
+					continue;
+				}
 				//we should convert from 2-values to thre-values
 				ULONG coords_count = uvs.size() / 2;
 				std::vector<float> xsi_uvs(3 * samples_count, 0.0f);
@@ -209,7 +311,39 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 				XSI::ClusterProperty uv_cluster = cluster_builder.AddUV();
 				uv_cluster.SetValues(xsi_uvs.data(), samples_count);
 			}
-			//also valid are: TANGENT, COLOR_n, JOINTS_n, WEIGHTS_n
+			else if (attribute.first.find("COLOR") == 0)
+			{
+				std::vector<float> colors = get_float_buffer(model, accessor);
+				if (colors.size() == 0)
+				{
+					continue;
+				}
+				int components = tinygltf::GetNumComponentsInType(accessor.type);
+				std::vector<float> xsi_colors(samples_count * 4, 0.0);
+				int colors_type = accessor.componentType;
+				for (ULONG i = 0; i < polygons.size(); i++)
+				{
+					LONG v = polygons[i];
+					for (ULONG c = 0; c < components; c++)
+					{
+						if (colors_type == 5121)
+						{//unsigned char
+							xsi_colors[4 * i + c] = colors[components * v + c] / 255.0;
+						}
+						else if (colors_type == 5123)
+						{//unsigned short, 65535 is maximal value
+							xsi_colors[4 * i + c] = colors[components * v + c] / 65535.0;
+						}
+						else
+						{//float
+							xsi_colors[4 * i + c] = colors[components * v + c];
+						}
+					}
+				}
+				XSI::ClusterProperty color_cluster = cluster_builder.AddVertexColor();
+				color_cluster.SetValues(xsi_colors.data(), samples_count);
+			}
+			//also valid are: TANGENT, JOINTS_n, WEIGHTS_n
 		}
 
 		//set object transform
