@@ -92,7 +92,7 @@ void import_images(const tinygltf::Model& model, const XSI::Scene& scene, const 
 	}
 }
 
-void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::unordered_map<int, XSI::ImageClip2>& clips_map, const tinygltf::ExtensionMap & extensions)
+void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::unordered_map<int, XSI::ImageClip2>& clips_map, const tinygltf::ExtensionMap & extensions, const int tex_coord)
 {
 	XSI::CRef new_source;
 	XSI::CRef prev_source;
@@ -105,6 +105,9 @@ void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::
 	is_connect = tex_param.Connect(clip, prev_source);
 
 	XSI::CParameterRefArray image_params = images_node.GetParameters();
+	//we does not support different uv channels
+	//because in Softimage we should set the name of the uvs, but gltf file contains only uv index
+	//different object can have different names of the same uv index.
 
 	//try to find texture transform extension
 	if (extensions.find("KHR_texture_transform") != extensions.end())
@@ -147,7 +150,7 @@ void connect_pbr_texture(XSI::Parameter &xsi_parameter, const tinygltf::Model& m
 	int image_index = texture_info.index;
 	if (image_index >= 0 && image_index < model.images.size() && images_map.find(image_index) != images_map.end())
 	{
-		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions);
+		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions, texture_info.texCoord);
 	}
 }
 
@@ -156,7 +159,7 @@ void connect_texture_normal(XSI::Parameter& xsi_parameter, const tinygltf::Model
 	int image_index = texture_info.index;
 	if (image_index >= 0 && image_index < model.images.size() && images_map.find(image_index) != images_map.end())
 	{
-		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions);
+		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions, texture_info.texCoord);
 	}
 }
 
@@ -165,7 +168,7 @@ void connect_texture_occlusion(XSI::Parameter& xsi_parameter, const tinygltf::Mo
 	int image_index = texture_info.index;
 	if (image_index >= 0 && image_index < model.images.size() && images_map.find(image_index) != images_map.end())
 	{
-		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions);
+		connect_texture(image_index, xsi_parameter, clips_map, texture_info.extensions, texture_info.texCoord);
 	}
 }
 

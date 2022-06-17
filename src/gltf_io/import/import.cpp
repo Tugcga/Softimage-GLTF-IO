@@ -119,10 +119,10 @@ bool import_gltf(const XSI::CString file_path)
 	}
 
 	XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
+	XSI::Null node_null;
+	xsi_root.AddNull(scene_name, node_null);
 	for (size_t i = 0; i < scene.nodes.size(); ++i)
 	{
-		XSI::Null node_null;
-		xsi_root.AddNull(scene_name, node_null);
 		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options);
 	}
 
