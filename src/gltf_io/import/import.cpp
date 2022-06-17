@@ -56,11 +56,16 @@ void process_node(const tinygltf::Model& model, const tinygltf::Node& node, cons
 	}
 
 	XSI::X3DObject next_parent;
-	if ((node.mesh >= 0) && (node.mesh < model.meshes.size()))
+	if (node.mesh >= 0 && node.mesh < model.meshes.size())
 	{
 		//this node contains the mesh
 		tinygltf::Mesh mesh = model.meshes[node.mesh];
 		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, mesh_options);  // return last primitivefrom the mesh
+	}
+	else if (node.camera >= 0 && node.camera < model.cameras.size())
+	{
+		tinygltf::Camera camera = model.cameras[node.camera];
+		next_parent = import_camera(model, camera, node_name, local_tfm, parent);
 	}
 
 	if (!next_parent.IsValid())
