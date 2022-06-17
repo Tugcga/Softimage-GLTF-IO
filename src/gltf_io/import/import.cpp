@@ -45,7 +45,7 @@ bool load_model(tinygltf::Model& model, const char* filename)
 	return state;
 }
 
-void process_node(const tinygltf::Model& model, const tinygltf::Node& node, const int node_index, XSI::X3DObject &parent, const ImportMeshOptions &mesh_options)
+void process_node(const tinygltf::Model& model, const tinygltf::Node& node, const int node_index, XSI::X3DObject &parent, const std::unordered_map<int, XSI::Material> &material_map, const ImportMeshOptions &mesh_options)
 {
 	//calculate node transform and recreate root transform for the child nodes
 	XSI::MATH::CTransformation local_tfm = import_transform(node);
@@ -60,7 +60,7 @@ void process_node(const tinygltf::Model& model, const tinygltf::Node& node, cons
 	{
 		//this node contains the mesh
 		tinygltf::Mesh mesh = model.meshes[node.mesh];
-		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, mesh_options);  // return last primitivefrom the mesh
+		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, mesh_options);  // return last primitivefrom the mesh
 	}
 
 	if (!next_parent.IsValid())
@@ -72,7 +72,7 @@ void process_node(const tinygltf::Model& model, const tinygltf::Node& node, cons
 	}
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, mesh_options);
+		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options);
 	}
 }
 
@@ -123,7 +123,7 @@ bool import_gltf(const XSI::CString file_path)
 	{
 		XSI::Null node_null;
 		xsi_root.AddNull(scene_name, node_null);
-		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, mesh_options);
+		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options);
 	}
 
 	return is_load;

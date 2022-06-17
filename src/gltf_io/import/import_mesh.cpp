@@ -11,6 +11,7 @@
 #include <xsi_polygonmesh.h>
 #include <xsi_geometryaccessor.h>
 #include <xsi_clusterpropertybuilder.h>
+#include <xsi_material.h>
 
 #include "../../tiny_gltf/tiny_gltf.h"
 
@@ -175,13 +176,40 @@ int get_closest_index(const std::vector<double> &positions, const double x, cons
 	return -1;
 }
 
-XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &mesh, const XSI::CString& object_name, const XSI::MATH::CTransformation &object_tfm, XSI::X3DObject &parent_object, const ImportMeshOptions& options)
+LONG attribute_length(const std::string &name)
+{
+	if (name.compare("NORMAL") == 0 || name.find("TEXCOORD") == 0)
+	{
+		return 3;
+	}
+	else if (name.find("COLOR") == 0)
+	{
+		return 4;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &mesh, const XSI::CString& object_name, const XSI::MATH::CTransformation &object_tfm, XSI::X3DObject &parent_object, const std::unordered_map<int, XSI::Material>& material_map, const ImportMeshOptions& options)
 {
 	//create the mesh
 	XSI::X3DObject xsi_object;
 	XSI::CMeshBuilder mesh_builder;
 	parent_object.AddPolygonMesh(object_name, xsi_object, mesh_builder);
 	ULONG vertex_start_index = 0;  // increase this value after each primitive submesh, this will allows to count new vertices not from 0, but from the index of previous submeshes
+	ULONG triangles_start_index = 0;
+	ULONG samples_start_index = 0;
+
+	//we should assign cluster materials after all polygons will be created
+	//so, write the data into some buffers
+	std::vector<std::vector<LONG>> primitives_material_triangles;
+	std::vector<XSI::Material> primitives_material;
+
+	//also save to some buffers data for normals, colors and uvs
+	//for each attribute we save separate array of data
+	std::unordered_map<std::string, std::vector<float>> attributes_map;  // key - attribute name, value - array of values
 
 	for (size_t primitive_index = 0; primitive_index < mesh.primitives.size(); primitive_index++)
 	{
@@ -197,38 +225,6 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			continue;
 		}
 
-		//proces vertices
-		/*std::unordered_map<ULONG, ULONG> vertices_map;  // key - old vertex index, value - new vertex index
-		std::vector<double> welded_positions(0);
-		if (options.weld_vertices)
-		{
-			//we should create new array with vertices and also create a map from old index to the new index
-			//and use this map for triangles
-			ULONG old_vertex_count = positions.size() / 3;
-			ULONG welded_index = 0;
-			for (ULONG i = 0; i < old_vertex_count; i++)
-			{
-				double x = positions[3*i];
-				double y = positions[3 * i + 1];
-				double z = positions[3 * i + 2];
-
-				//find in the welded positions close vertex
-				int index = get_closest_index(welded_positions, x, y, z);
-				if (index == -1)
-				{//there are no close points
-					welded_positions.push_back(x);
-					welded_positions.push_back(y);
-					welded_positions.push_back(z);
-					vertices_map[i] = welded_index;
-					welded_index++;
-				}
-				else
-				{
-					vertices_map[i] = index;
-				}
-			}
-		}*/
-
 		//get triangle indices
 		std::vector<LONG> polygons = get_polygon_inidices(model, primitive, vertex_start_index);
 		ULONG vertex_count = positions.size() / 3;
@@ -242,31 +238,56 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			continue;
 		}
 
-		/*if (options.weld_vertices)
-		{
-			mesh_builder.AddVertices(welded_positions.size() / 3, welded_positions.data());
-			//we should form new array for triangles
-			std::vector<LONG> weld_polygons(triangles_count * 3);
-			for (ULONG i = 0; i < polygons.size(); i++)
-			{
-				weld_polygons[i] = vertices_map[polygons[i]];
-			}
-
-			mesh_builder.AddPolygons(triangles_count, polygon_sizes.data(), weld_polygons.data());
-		}*/
-		//else
-		//{
 		mesh_builder.AddVertices(vertex_count, positions.data());
 		mesh_builder.AddPolygons(triangles_count, polygon_sizes.data(), polygons.data());
-		//}
 
-		//add other attributes
-		/*XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
-		XSI::CClusterPropertyBuilder cluster_builder = xsi_mesh.GetClusterPropertyBuilder();
+		positions.clear();
+		positions.shrink_to_fit();
+		polygon_sizes.clear();
+		polygon_sizes.shrink_to_fit();
+		
+		int material_index = primitive.material;
+		if (material_map.find(material_index) != material_map.end())
+		{
+			XSI::Material material = material_map.at(material_index);
+			//form array with triangle indices
+			std::vector<LONG> material_triangles(triangles_count);
+			for (ULONG i = 0; i < triangles_count; i++)
+			{
+				material_triangles[i] = i + triangles_start_index;
+			}
+			primitives_material.push_back(material);
+			primitives_material_triangles.push_back(material_triangles);
+		}
+
+		//save add other attributes
 		for (const std::pair<const std::string, int>& attribute : primitive.attributes)
 		{
 			//get accessor to the attribute
 			const tinygltf::Accessor& accessor = model.accessors[attribute.second];
+			std::string attribute_name = attribute.first;
+			if (attribute_name == "POSITION")
+			{
+				continue;
+			}
+			LONG attr_length = attribute_length(attribute_name);
+			if (attributes_map.find(attribute_name) == attributes_map.end())
+			{
+				//this is a new attribute, previously we does not read data for it
+				//but may be previous primitives were readed
+				//normals and uvs are 3-values, but colors are 4-values
+				std::vector<float> attibute_data(samples_start_index * attr_length, 0.0f);
+				attributes_map[attribute_name] = attibute_data;
+			}
+
+			std::vector<float>& attr_data = attributes_map.at(attribute_name);
+			LONG prev_size = attr_data.size();
+			//fill attr_data by empty values, if some previous primitives does not contains the data
+			for (LONG i = 0; i < samples_start_index * attr_length - prev_size; i++)
+			{
+				attr_data.push_back(0.0f);
+			}
+
 			if (attribute.first.compare("NORMAL") == 0)
 			{
 				std::vector<float> normals = get_float_buffer(model, accessor);
@@ -277,17 +298,16 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 				}
 				//from gltf we obtain normal for each vertex
 				//but in Softimage we should set the normal for each polygon corner - sample
-				//so, we should convert per-point array t per-sample array
-				std::vector<float> xsi_normals(samples_count * 3);
+				//so, we should convert per-point array to per-sample array
 				for (ULONG i = 0; i < polygons.size(); i++)
 				{
-					LONG v = polygons[i];  // vertex index
-					xsi_normals[3 * i] = normals[3 * v];
-					xsi_normals[3 * i + 1] = normals[3 * v + 1];
-					xsi_normals[3 * i + 2] = normals[3 * v + 2];
+					LONG v = polygons[i] - vertex_start_index;  // vertex index
+					attr_data.push_back(normals[3 * v]);
+					attr_data.push_back(normals[3 * v + 1]);
+					attr_data.push_back(normals[3 * v + 2]);
 				}
-				XSI::ClusterProperty normal_cluster = cluster_builder.AddUserNormal(options.weld_vertices ? false : true);  // make cluster non-complete in the case when we weld vertices, because it crash. For non-welded vertices complete cluster works ok
-				normal_cluster.SetValues(xsi_normals.data(), samples_count);
+				normals.clear();
+				normals.shrink_to_fit();
 			}
 			else if (attribute.first.find("TEXCOORD") == 0)
 			{
@@ -297,18 +317,17 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 					// there are no valid uvs data
 					continue;
 				}
-				//we should convert from 2-values to thre-values
+				//we should convert from 2-values to three-values
 				ULONG coords_count = uvs.size() / 2;
-				std::vector<float> xsi_uvs(3 * samples_count, 0.0f);
 				for (ULONG i = 0; i < polygons.size(); i++)
 				{
-					ULONG v = polygons[i];
-					xsi_uvs[3 * i] = uvs[2 * v];
-					xsi_uvs[3 * i + 1] = 1.0f - uvs[2 * v + 1];  // flip v axis
+					ULONG v = polygons[i] - vertex_start_index;
+					attr_data.push_back(uvs[2 * v]);
+					attr_data.push_back(1.0f - uvs[2 * v + 1]);
+					attr_data.push_back(0.0f);
 				}
-
-				XSI::ClusterProperty uv_cluster = cluster_builder.AddUV();
-				uv_cluster.SetValues(xsi_uvs.data(), samples_count);
+				uvs.clear();
+				uvs.shrink_to_fit();
 			}
 			else if (attribute.first.find("COLOR") == 0)
 			{
@@ -318,41 +337,105 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 					continue;
 				}
 				int components = tinygltf::GetNumComponentsInType(accessor.type);
-				std::vector<float> xsi_colors(samples_count * 4, 0.0);
 				int colors_type = accessor.componentType;
 				for (ULONG i = 0; i < polygons.size(); i++)
 				{
-					LONG v = polygons[i];
+					LONG v = polygons[i] - vertex_start_index;
 					for (ULONG c = 0; c < components; c++)
 					{
 						if (colors_type == 5121)
 						{//unsigned char
-							xsi_colors[4 * i + c] = colors[components * v + c] / 255.0f;
+							attr_data.push_back(colors[components * v + c] / 255.0f);
 						}
 						else if (colors_type == 5123)
 						{//unsigned short, 65535 is maximal value
-							xsi_colors[4 * i + c] = colors[components * v + c] / 65535.0f;
+							attr_data.push_back(colors[components * v + c] / 65535.0f);
 						}
 						else
 						{//float
-							xsi_colors[4 * i + c] = colors[components * v + c];
+							attr_data.push_back(colors[components * v + c]);
 						}
 					}
+					for (ULONG c = components; c < 4; c++)
+					{
+						attr_data.push_back(0.0f);
+					}
 				}
-				XSI::ClusterProperty color_cluster = cluster_builder.AddVertexColor();
-				color_cluster.SetValues(xsi_colors.data(), samples_count);
+				colors.clear();
+				colors.shrink_to_fit();
 			}
 			//also valid are: TANGENT, JOINTS_n, WEIGHTS_n
-		}*/
+		}
+
+		polygons.clear();
+		polygons.shrink_to_fit();
 
 		vertex_start_index += vertex_count;
+		triangles_start_index += triangles_count;
+		samples_start_index += samples_count;
 	}
 
 	// Generate the new mesh
 	mesh_builder.Build(false);
 
+	//next add attributes
+	XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
+	XSI::CClusterPropertyBuilder cluster_builder = xsi_mesh.GetClusterPropertyBuilder();
+	for (auto const& pair : attributes_map)
+	{
+		std::string attr_name = pair.first;
+		const std::vector<float>& attr_data = pair.second;
+		
+		XSI::ClusterProperty cluster;
+		if (attr_name.compare("NORMAL") == 0)
+		{
+			cluster = cluster_builder.AddUserNormal(true);
+		}
+		else if (attr_name.find("TEXCOORD") == 0)
+		{
+			cluster = cluster_builder.AddUV();
+		}
+		else if (attr_name.find("COLOR") == 0)
+		{
+			cluster = cluster_builder.AddVertexColor();
+		}
+		if (cluster.IsValid())
+		{
+			cluster.SetValues(attr_data.data(), samples_start_index);
+		}
+	}
+
+	if (primitives_material.size() > 0)
+	{
+		//apply the first material to the whole object
+		XSI::Material main_material = primitives_material[0];
+		XSI::CValueArray apply_material_args(2);
+		XSI::CValueArray objects(2);
+		objects[0] = xsi_object;
+		objects[1] = main_material;
+		apply_material_args[0] = objects;
+		apply_material_args[1] = XSI::siRemoveFromExistingClusters;
+		XSI::CValue io_value;
+		XSI::Application().ExecuteCommand("AssignMaterial", apply_material_args, io_value);
+
+		//apply cluster materials
+		for (ULONG i = 0; i < primitives_material.size(); i++)
+		{
+			XSI::Material material = primitives_material[i];
+			std::vector<LONG> material_triangles = primitives_material_triangles[i];
+			mesh_builder.SetPolygonsMaterial(material, material_triangles.size(), material_triangles.data());
+			material_triangles.clear();
+			material_triangles.shrink_to_fit();
+		}
+	}
+
 	//set object transform
 	xsi_object.GetKinematics().GetLocal().PutTransform(object_tfm);
+
+	//clear buffers
+	attributes_map.clear();
+	primitives_material.clear();
+	primitives_material_triangles.clear();
 
 	return xsi_object;
 }
