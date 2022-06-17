@@ -92,23 +92,8 @@ void import_images(const tinygltf::Model& model, const XSI::Scene& scene, const 
 	}
 }
 
-void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::unordered_map<int, XSI::ImageClip2>& clips_map, const tinygltf::ExtensionMap & extensions, const int tex_coord)
+void update_texture_transform(const tinygltf::ExtensionMap &extensions, double &scale_u, double &scale_v)
 {
-	XSI::CRef new_source;
-	XSI::CRef prev_source;
-	xsi_parameter.ConnectFromPreset("Image", XSI::siTextureShaderFamily, prev_source, new_source);
-
-	XSI::Shader images_node = new_source;
-	XSI::CStatus is_connect = xsi_parameter.Connect(images_node, prev_source);
-	XSI::Parameter tex_param = images_node.GetParameter("tex");
-	XSI::ImageClip2 clip = clips_map.at(image_index);
-	is_connect = tex_param.Connect(clip, prev_source);
-
-	XSI::CParameterRefArray image_params = images_node.GetParameters();
-	//we does not support different uv channels
-	//because in Softimage we should set the name of the uvs, but gltf file contains only uv index
-	//different object can have different names of the same uv index.
-
 	//try to find texture transform extension
 	if (extensions.find("KHR_texture_transform") != extensions.end())
 	{
@@ -130,19 +115,41 @@ void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::
 						tinygltf::Value scale_v_value = scale_value.Get(1);
 						if (scale_u_value.IsReal() && scale_v_value.IsReal())
 						{
-							double scale_u = scale_u_value.GetNumberAsDouble();
-							double scale_v = scale_v_value.GetNumberAsDouble();
-
-							//set these values to the texture
-							XSI::Parameter repeats_param = image_params.GetItem("repeats");
-							repeats_param.PutParameterValue("x", scale_u);
-							repeats_param.PutParameterValue("y", scale_v);
+							scale_u = scale_u_value.GetNumberAsDouble();
+							scale_v = scale_v_value.GetNumberAsDouble();
 						}
 					}
 				}
 			}
 		}
 	}
+}
+
+void connect_texture(int image_index, XSI::Parameter& xsi_parameter, const std::unordered_map<int, XSI::ImageClip2>& clips_map, const tinygltf::ExtensionMap & extensions, const int tex_coord)
+{
+	XSI::CRef new_source;
+	XSI::CRef prev_source;
+	xsi_parameter.ConnectFromPreset("Image", XSI::siTextureShaderFamily, prev_source, new_source);
+
+	XSI::Shader images_node = new_source;
+	XSI::CStatus is_connect = xsi_parameter.Connect(images_node, prev_source);
+	XSI::Parameter tex_param = images_node.GetParameter("tex");
+	XSI::ImageClip2 clip = clips_map.at(image_index);
+	is_connect = tex_param.Connect(clip, prev_source);
+
+	XSI::CParameterRefArray image_params = images_node.GetParameters();
+	//we does not support different uv channels
+	//because in Softimage we should set the name of the uvs, but gltf file contains only uv index
+	//different object can have different names of the same uv index.
+
+	double scale_u = 1.0;
+	double scale_v = 1.0;
+	update_texture_transform(extensions, scale_u, scale_v);
+
+	//set these values to the texture
+	XSI::Parameter repeats_param = image_params.GetItem("repeats");
+	repeats_param.PutParameterValue("x", scale_u);
+	repeats_param.PutParameterValue("y", scale_v);
 }
 
 void connect_pbr_texture(XSI::Parameter &xsi_parameter, const tinygltf::Model& model, const tinygltf::TextureInfo &texture_info,  const std::unordered_map<int, XSI::CString>& images_map, const std::unordered_map<int, XSI::ImageClip2>& clips_map)
