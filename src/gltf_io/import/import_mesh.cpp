@@ -328,11 +328,11 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 					{
 						if (colors_type == 5121)
 						{//unsigned char
-							xsi_colors[4 * i + c] = colors[components * v + c] / 255.0;
+							xsi_colors[4 * i + c] = colors[components * v + c] / 255.0f;
 						}
 						else if (colors_type == 5123)
 						{//unsigned short, 65535 is maximal value
-							xsi_colors[4 * i + c] = colors[components * v + c] / 65535.0;
+							xsi_colors[4 * i + c] = colors[components * v + c] / 65535.0f;
 						}
 						else
 						{//float

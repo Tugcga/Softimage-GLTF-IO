@@ -63,6 +63,7 @@
   <ItemGroup>
     <ClCompile Include=".\SoftimageGLTF_IO.cpp" />
     <ClCompile Include="gltf_io\import\import.cpp" />
+    <ClCompile Include="gltf_io\import\import_material.cpp" />
     <ClCompile Include="gltf_io\import\import_mesh.cpp" />
     <ClCompile Include="gltf_io\import\import_transform.cpp" />
     <ClCompile Include="utilities\logs.cpp" />

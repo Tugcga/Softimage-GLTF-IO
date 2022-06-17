@@ -12,5 +12,9 @@ XSI::CString to_string(const std::vector<double>& array);
 XSI::CString to_string(const std::vector<float>& array);
 XSI::CString to_string(const std::vector<int>& array);
 XSI::CString to_string(const std::vector<LONG>& array);
+XSI::CString to_string(const std::vector<std::string>& array);
 
 FileType detect_file_type(const std::string& path);
+
+XSI::CString file_name_from_path(const XSI::CString& file_path);
+bool create_dir(const std::string& file_path);

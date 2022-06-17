@@ -4,6 +4,8 @@
 #include <xsi_model.h>
 #include <xsi_null.h>
 #include <xsi_kinematics.h>
+#include <xsi_scene.h>
+#include <xsi_project.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -80,21 +82,46 @@ bool import_gltf(const XSI::CString file_path)
 	bool is_load = load_model(model, file_path.GetAsciiString());
 
 	const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
-	XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
-
+	
 	ImportMeshOptions mesh_options
 	{
 		false, // weld_vertices
 	};
 
+	XSI::CString scene_name = scene.name.c_str();
+	if (scene_name.Length() == 0)
+	{
+		scene_name = file_name_from_path(file_path);
+	}
+
+	std::unordered_map<int, XSI::Material> material_map;  // key - material index, value - xsi material
+	ULONG materials_count = model.materials.size();
+	if (materials_count > 0)
+	{
+		XSI::Scene scene = XSI::Application().GetActiveProject().GetActiveScene();
+		XSI::CValueArray args(1);
+		args[0] = scene_name;
+		XSI::CValue create_out;
+		XSI::Application().ExecuteCommand("CreateLibrary", args, create_out);
+		XSI::CValueArray create_out_array(create_out);
+		XSI::MaterialLibrary library = create_out_array[0];
+
+		//at first we should import all images for textures
+		std::unordered_map<int, XSI::CString> images_map;  // key - image index, value - full path to the image file
+		std::unordered_map<int, XSI::ImageClip2> clips_map;
+		import_images(model, scene, scene_name, file_path, images_map, clips_map);
+
+		for (ULONG i = 0; i < model.materials.size(); i++)
+		{
+			tinygltf::Material material = model.materials[i];
+			bool is_create = import_material(model, material, i, library, images_map, clips_map, material_map);
+		}
+	}
+
+	XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
 	for (size_t i = 0; i < scene.nodes.size(); ++i)
 	{
 		XSI::Null node_null;
-		XSI::CString scene_name = scene.name.c_str();
-		if (scene_name.Length() == 0)
-		{
-			scene_name = "Scene";
-		}
 		xsi_root.AddNull(scene_name, node_null);
 		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, mesh_options);
 	}
