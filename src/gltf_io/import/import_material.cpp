@@ -194,16 +194,25 @@ bool import_material(const tinygltf::Model& model, const tinygltf::Material &mat
 	shadow_param.Disconnect();
 	photon_param.Disconnect();
 
-	XSI::CString old_phong_raw_path = old_phong.GetFullName();
-	ULONG last_dot_position = old_phong_raw_path.ReverseFindString(".");
-	ULONG prev_dot_position = old_phong_raw_path.ReverseFindString(".", last_dot_position - 1);
-	XSI::CString old_phong_path = old_phong_raw_path.GetSubString(0, prev_dot_position) + old_phong_raw_path.GetSubString(last_dot_position);	
 	XSI::CValueArray args(2);
-	args[0] = XSI::CValue(old_phong_path);
+	args[0] = XSI::CValue(old_phong.GetFullName());
 	args[1] = XSI::CValue(xsi_material.GetFullName());
 	XSI::CValue io_value;
 	XSI::Application().ExecuteCommand("DisconnectAndDeleteOrUnnestShaders", args, io_value);
-	
+
+	if (old_phong.IsValid())
+	{
+		//remove NestedShader part from the path
+		XSI::CString old_phong_raw_path = old_phong.GetFullName();
+		ULONG last_dot_position = old_phong_raw_path.ReverseFindString(".");
+		ULONG prev_dot_position = old_phong_raw_path.ReverseFindString(".", last_dot_position - 1);
+		XSI::CString old_phong_path = old_phong_raw_path.GetSubString(0, prev_dot_position) + old_phong_raw_path.GetSubString(last_dot_position);
+
+		args[0] = XSI::CValue(old_phong_path);
+		args[1] = XSI::CValue(xsi_material.GetFullName());
+		XSI::Application().ExecuteCommand("DisconnectAndDeleteOrUnnestShaders", args, io_value);
+	}
+
 	XSI::Shader shader = new_source;
 	
 	XSI::CParameterRefArray xsi_params = shader.GetParameters();

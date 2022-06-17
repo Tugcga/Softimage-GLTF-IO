@@ -17,7 +17,7 @@
 #include "../../utilities/utilities.h"
 #include "../import.h"
 
-std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive)
+std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const ULONG first_index)
 {
 	const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
 	int component_type = polygon_accessor.componentType;
@@ -32,7 +32,7 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const unsigned short* polygons = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
 		for (size_t i = 0; i < polygon_accessor.count; ++i)
 		{
-			to_return[i] = polygons[i];
+			to_return[i] = polygons[i] + first_index;
 		}
 	}
 	else if (component_type == 5120)
@@ -40,7 +40,7 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const signed char* polygons = reinterpret_cast<const signed char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
 		for (size_t i = 0; i < polygon_accessor.count; ++i)
 		{
-			to_return[i] = polygons[i];
+			to_return[i] = polygons[i] + first_index;
 		}
 	}
 	else if (component_type == 5121)
@@ -48,7 +48,7 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const unsigned char* polygons = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
 		for (size_t i = 0; i < polygon_accessor.count; ++i)
 		{
-			to_return[i] = polygons[i];
+			to_return[i] = polygons[i] + first_index;
 		}
 	}
 	else if (component_type == 5122)
@@ -56,7 +56,7 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const signed short* polygons = reinterpret_cast<const signed short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
 		for (size_t i = 0; i < polygon_accessor.count; ++i)
 		{
-			to_return[i] = polygons[i];
+			to_return[i] = polygons[i] + first_index;
 		}
 	}
 	else if (component_type == 5125)
@@ -64,7 +64,7 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const unsigned int* polygons = reinterpret_cast<const unsigned int*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
 		for (size_t i = 0; i < polygon_accessor.count; ++i)
 		{
-			to_return[i] = polygons[i];
+			to_return[i] = polygons[i] + first_index;
 		}
 	}
 	else
@@ -177,7 +177,12 @@ int get_closest_index(const std::vector<double> &positions, const double x, cons
 
 XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &mesh, const XSI::CString& object_name, const XSI::MATH::CTransformation &object_tfm, XSI::X3DObject &parent_object, const ImportMeshOptions& options)
 {
-	XSI::X3DObject object;
+	//create the mesh
+	XSI::X3DObject xsi_object;
+	XSI::CMeshBuilder mesh_builder;
+	parent_object.AddPolygonMesh(object_name, xsi_object, mesh_builder);
+	ULONG vertex_start_index = 0;  // increase this value after each primitive submesh, this will allows to count new vertices not from 0, but from the index of previous submeshes
+
 	for (size_t primitive_index = 0; primitive_index < mesh.primitives.size(); primitive_index++)
 	{
 		tinygltf::Primitive primitive = mesh.primitives[primitive_index];
@@ -193,7 +198,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 		}
 
 		//proces vertices
-		std::unordered_map<ULONG, ULONG> vertices_map;  // key - old vertex index, value - new vertex index
+		/*std::unordered_map<ULONG, ULONG> vertices_map;  // key - old vertex index, value - new vertex index
 		std::vector<double> welded_positions(0);
 		if (options.weld_vertices)
 		{
@@ -222,10 +227,10 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 					vertices_map[i] = index;
 				}
 			}
-		}
+		}*/
 
 		//get triangle indices
-		std::vector<LONG> polygons = get_polygon_inidices(model, primitive);
+		std::vector<LONG> polygons = get_polygon_inidices(model, primitive, vertex_start_index);
 		ULONG vertex_count = positions.size() / 3;
 		ULONG triangles_count = polygons.size() / 3;
 		ULONG samples_count = polygons.size();
@@ -237,11 +242,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			continue;
 		}
 
-		//create the mesh
-		XSI::X3DObject xsi_object;
-		XSI::CMeshBuilder mesh_builder;
-		parent_object.AddPolygonMesh(object_name + (mesh.primitives.size() == 1 ? "" : "_" + XSI::CString(primitive_index)), xsi_object, mesh_builder);
-		if (options.weld_vertices)
+		/*if (options.weld_vertices)
 		{
 			mesh_builder.AddVertices(welded_positions.size() / 3, welded_positions.data());
 			//we should form new array for triangles
@@ -252,17 +253,15 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			}
 
 			mesh_builder.AddPolygons(triangles_count, polygon_sizes.data(), weld_polygons.data());
-		}
-		else
-		{
-			mesh_builder.AddVertices(vertex_count, positions.data());
-			mesh_builder.AddPolygons(triangles_count, polygon_sizes.data(), polygons.data());
-		}
-		// Generate the new mesh
-		mesh_builder.Build(false);
+		}*/
+		//else
+		//{
+		mesh_builder.AddVertices(vertex_count, positions.data());
+		mesh_builder.AddPolygons(triangles_count, polygon_sizes.data(), polygons.data());
+		//}
 
 		//add other attributes
-		XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
+		/*XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
 		XSI::CClusterPropertyBuilder cluster_builder = xsi_mesh.GetClusterPropertyBuilder();
 		for (const std::pair<const std::string, int>& attribute : primitive.attributes)
 		{
@@ -344,13 +343,16 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 				color_cluster.SetValues(xsi_colors.data(), samples_count);
 			}
 			//also valid are: TANGENT, JOINTS_n, WEIGHTS_n
-		}
+		}*/
 
-		//set object transform
-		xsi_object.GetKinematics().GetLocal().PutTransform(object_tfm);
-
-		object = xsi_object;
+		vertex_start_index += vertex_count;
 	}
 
-	return object;
+	// Generate the new mesh
+	mesh_builder.Build(false);
+
+	//set object transform
+	xsi_object.GetKinematics().GetLocal().PutTransform(object_tfm);
+
+	return xsi_object;
 }
