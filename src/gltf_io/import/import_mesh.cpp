@@ -437,6 +437,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 		}
 	}
 
+	XSI::CValue io_value;
 	for (auto it = shapes_map.cbegin(); it != shapes_map.cend(); ++it)
 	{
 		ULONG shape_index = it->first;
@@ -444,6 +445,16 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 
 		XSI::ClusterProperty cluster = cluster_builder.AddShapeKey();
 		cluster.SetValues(shape_values.data(), vertex_start_index);
+
+		//apply created shape key
+		//if we call the command, then the second shape is not visible in the shape manager
+		//may be we should call it with other parameters
+		/*XSI::CValueArray shape_args(8);
+		shape_args[0] = XSI::CValue(cluster);
+		shape_args[3] = XSI::CValue(3);
+		shape_args[5] = XSI::CValue(5);
+		shape_args[7] = XSI::CValue(2);
+		XSI::Application().ExecuteCommand("ApplyShapeKey", shape_args, io_value);*/
 	}
 
 	if (primitives_material.size() > 0)
