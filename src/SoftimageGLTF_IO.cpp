@@ -63,11 +63,14 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoxVertexColors.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\colored_01.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoomBox.gltf");
-	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Duck.glb");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Duck.glb");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\TextureTransformTest.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\box_3primitives.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\MultiUVTest.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Cameras.gltf");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\AnimatedTriangle.gltf");
+	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\MorphPrimitivesTest.gltf");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\SimpleMorph.gltf");
 
 	return XSI::CStatus::OK;
 }

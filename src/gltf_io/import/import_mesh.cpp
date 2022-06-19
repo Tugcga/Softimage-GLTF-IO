@@ -210,6 +210,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 	//also save to some buffers data for normals, colors and uvs
 	//for each attribute we save separate array of data
 	std::unordered_map<std::string, std::vector<float>> attributes_map;  // key - attribute name, value - array of values
+	std::unordered_map<ULONG, std::vector<float>> shapes_map;  // key - shape index, value - positions
 
 	for (size_t primitive_index = 0; primitive_index < mesh.primitives.size(); primitive_index++)
 	{
@@ -260,7 +261,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			primitives_material_triangles.push_back(material_triangles);
 		}
 
-		//save add other attributes
+		//save other attributes
 		for (const std::pair<const std::string, int>& attribute : primitive.attributes)
 		{
 			//get accessor to the attribute
@@ -367,6 +368,37 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			//also valid are: TANGENT, JOINTS_n, WEIGHTS_n
 		}
 
+		//next shapes
+		//we supports only position shape, because Softimage can not allows to deform normals or tangents
+		for (ULONG shape_index = 0; shape_index < primitive.targets.size(); shape_index++)
+		{
+			std::map<std::string, int>& gltf_shape = primitive.targets[shape_index];
+			if (gltf_shape.find("POSITION") != gltf_shape.end())
+			{
+				//this shape contains positions data
+				if (shapes_map.find(shape_index) == shapes_map.end())
+				{
+					std::vector<float> shape_data(vertex_start_index * 3, 0.0f);
+					shapes_map[shape_index] = shape_data;
+				}
+				std::vector<float>& shape_data = shapes_map.at(shape_index);
+				LONG prev_size = shape_data.size();
+				for (LONG i = 0; i < vertex_start_index * 3 - prev_size; i++)
+				{
+					shape_data.push_back(0.0f);
+				}
+
+				int shape_positions_index = gltf_shape.at("POSITION");
+				const tinygltf::Accessor& shape_accessor = model.accessors[shape_positions_index];
+				std::vector<float> shape_positions = get_float_buffer(model, shape_accessor);
+				if (shape_positions.size() > 0)
+				{
+					shape_data.reserve(shape_data.size() + std::distance(shape_positions.begin(), shape_positions.end()));
+					shape_data.insert(shape_data.end(), shape_positions.begin(), shape_positions.end());
+				}
+			}
+		}
+		
 		polygons.clear();
 		polygons.shrink_to_fit();
 
@@ -405,6 +437,15 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 		}
 	}
 
+	for (auto it = shapes_map.cbegin(); it != shapes_map.cend(); ++it)
+	{
+		ULONG shape_index = it->first;
+		std::vector<float> shape_values = it->second;
+
+		XSI::ClusterProperty cluster = cluster_builder.AddShapeKey();
+		cluster.SetValues(shape_values.data(), vertex_start_index);
+	}
+
 	if (primitives_material.size() > 0)
 	{
 		//apply the first material to the whole object
@@ -436,6 +477,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 	attributes_map.clear();
 	primitives_material.clear();
 	primitives_material_triangles.clear();
+	shapes_map.clear();
 
 	return xsi_object;
 }
