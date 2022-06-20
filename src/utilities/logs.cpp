@@ -49,6 +49,17 @@ XSI::CString to_string(const std::vector<LONG>& array)
 	return to_return;
 }
 
+XSI::CString to_string(const std::vector<ULONG>& array)
+{
+	XSI::CString to_return = XSI::CString(array.size()) + ": [";
+	for (size_t i = 0; i < array.size(); i++)
+	{
+		to_return += XSI::CString(array[i]) + (i == array.size() - 1 ? "]" : ", ");
+	}
+
+	return to_return;
+}
+
 XSI::CString to_string(const std::vector<std::string>& array)
 {
 	XSI::CString to_return = XSI::CString(array.size()) + ": [";

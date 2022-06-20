@@ -18,6 +18,46 @@
 #include "../../utilities/utilities.h"
 #include "../import.h"
 
+std::vector<ULONG> get_integer_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
+{
+	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
+	int component_type = accessor.componentType;
+	std::vector<ULONG> to_return(components * accessor.count);
+
+	const tinygltf::BufferView& buffer_view = model.bufferViews[accessor.bufferView];
+	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
+
+	if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+	{
+		const unsigned char* data = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
+		for (size_t i = 0; i < accessor.count; ++i)
+		{
+			for (int32_t c = 0; c < components; c++)
+			{
+				to_return[components * i + c] = data[i * components + c];
+			}
+		}
+	}
+	else if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+	{
+		const unsigned short* data = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
+		for (size_t i = 0; i < accessor.count; ++i)
+		{
+			for (int32_t c = 0; c < components; c++)
+			{
+				to_return[components * i + c] = data[i * components + c];
+			}
+		}
+	}
+	else
+	{
+		std::vector<ULONG> empty(0);
+		return empty;
+	}
+
+	return to_return;
+}
+
 std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const ULONG first_index)
 {
 	const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
@@ -74,58 +114,6 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		return empty;
 	}
 
-	return to_return;
-}
-
-std::vector<float> get_float_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
-{
-	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
-	int component_type = accessor.componentType;
-
-	std::vector<float> to_return(components * accessor.count);
-
-	const tinygltf::BufferView& buffer_view = model.bufferViews[accessor.bufferView];
-	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
-
-	if (component_type == 5126)
-	{
-		const float* data = reinterpret_cast<const float*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-		for (size_t i = 0; i < accessor.count; ++i)
-		{
-			for (int32_t c = 0; c < components; c++)
-			{
-				to_return[components * i + c] = data[i * components + c];
-			}
-		}
-	}
-	else if (component_type == 5121)
-	{
-		const unsigned char* data = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-		for (size_t i = 0; i < accessor.count; ++i)
-		{
-			for (int32_t c = 0; c < components; c++)
-			{
-				to_return[components * i + c] = data[i * components + c];
-			}
-		}
-	}
-	else if (component_type == 5123)
-	{
-		const unsigned short* data = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-		for (size_t i = 0; i < accessor.count; ++i)
-		{
-			for (int32_t c = 0; c < components; c++)
-			{
-				to_return[components * i + c] = data[i * components + c];
-			}
-		}
-	}
-	else
-	{
-		std::vector<float> empty(0);
-		return empty;
-	}
-	
 	return to_return;
 }
 

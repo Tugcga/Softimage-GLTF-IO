@@ -45,7 +45,13 @@ bool load_model(tinygltf::Model& model, const char* filename)
 	return state;
 }
 
-void process_node(const tinygltf::Model& model, const tinygltf::Node& node, const int node_index, XSI::X3DObject &parent, const std::unordered_map<int, XSI::Material> &material_map, const ImportMeshOptions &mesh_options)
+void process_node(const tinygltf::Model& model, 
+	const tinygltf::Node& node, 
+	const int node_index, 
+	XSI::X3DObject &parent, 
+	const std::unordered_map<int, XSI::Material> &material_map, 
+	const ImportMeshOptions &mesh_options,
+	std::unordered_map<ULONG, XSI::X3DObject> &nodes_map)
 {
 	//calculate node transform and recreate root transform for the child nodes
 	XSI::MATH::CTransformation local_tfm = import_transform(node);
@@ -75,9 +81,12 @@ void process_node(const tinygltf::Model& model, const tinygltf::Node& node, cons
 		node_null.GetKinematics().GetLocal().PutTransform(local_tfm);
 		next_parent = node_null;
 	}
+
+	nodes_map[node_index] = next_parent;
+
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options);
+		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options, nodes_map);
 	}
 }
 
@@ -121,15 +130,24 @@ bool import_gltf(const XSI::CString file_path)
 			tinygltf::Material material = model.materials[i];
 			bool is_create = import_material(model, material, i, library, images_map, clips_map, material_map);
 		}
+
+		images_map.clear();
+		clips_map.clear();
 	}
+
+	std::unordered_map<ULONG, XSI::X3DObject> nodes_map;  // key - node index, value - corresponding object in the Softimage
 
 	XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
 	XSI::Null node_null;
 	xsi_root.AddNull(scene_name, node_null);
 	for (size_t i = 0; i < scene.nodes.size(); ++i)
 	{
-		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options);
+		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options, nodes_map);
 	}
+
+	import_animation(model, nodes_map);
+
+	nodes_map.clear();
 
 	return is_load;
 }
