@@ -12,6 +12,7 @@
 #include <xsi_geometryaccessor.h>
 #include <xsi_clusterpropertybuilder.h>
 #include <xsi_material.h>
+#include <xsi_envelopeweight.h>
 
 #include "../../tiny_gltf/tiny_gltf.h"
 
@@ -180,7 +181,76 @@ LONG attribute_length(const std::string &name)
 	}
 }
 
-XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &mesh, const XSI::CString& object_name, const XSI::MATH::CTransformation &object_tfm, XSI::X3DObject &parent_object, const std::unordered_map<int, XSI::Material>& material_map, const ImportMeshOptions& options)
+void increase_envelop_weight_value(std::unordered_map<ULONG, std::vector<float>>& envelop_map,
+	const ULONG joint, const float weight, const ULONG vertex_index,
+	const ULONG start_vertex_index, const ULONG vertex_count)
+{
+	//try to find the key
+	std::unordered_map<ULONG, std::vector<float>>::iterator joint_it = envelop_map.find(joint);
+	if (joint_it == envelop_map.end())
+	{//the joint is new for the map
+		//create new array for this key
+		std::vector<float> new_array(start_vertex_index, 0.0f);
+		envelop_map[joint] = new_array;
+		joint_it = envelop_map.find(joint);
+	}
+
+	std::vector<float>& envelop_data = joint_it->second;
+	//try to increase the size, in fact we does not need this, because we resize all arrays at the first step
+	if (envelop_data.size() < start_vertex_index + vertex_count)
+	{
+		envelop_data.resize(start_vertex_index + vertex_count, 0.0f);
+	}
+	envelop_data[start_vertex_index + vertex_index] += weight * 100.0f;  // in gltf weights from 0 to 1, in Softimage from 0 to 100
+}
+
+void add_envelop_data(const ULONG start_vertex_index, const ULONG vertex_count, const std::vector<ULONG> &joints, const std::vector<float> &weights, 
+	std::unordered_map<ULONG, std::vector<float>> &envelop_map)
+{
+	//start_vertex_index is mesh vertex index of the first vertex in the current submesh
+	//the key for envelop_map is joint index, value - array of weight for all mesh vertices
+
+	//for all joint the size of the array should be the same ( = total vertex count)
+	//so, at first we should resize all arrays, and only then setup values
+	for (auto & pair : envelop_map)
+	{
+		std::vector<float>& joint_weights = pair.second;
+		joint_weights.resize(start_vertex_index + vertex_count, 0.0f);
+	}
+
+	ULONG steps = joints.size() / (4 * vertex_count);  // at present time we does not have gltf examples with several joints attributes
+	for (ULONG step = 0; step < steps; step++)
+	{
+		ULONG shift = step * 4 * vertex_count;
+		for (ULONG i = 0; i < vertex_count; i++)
+		{
+			ULONG j1 = joints[shift + 4 * i];
+			ULONG j2 = joints[shift + 4 * i + 1];
+			ULONG j3 = joints[shift + 4 * i + 2];
+			ULONG j4 = joints[shift + 4 * i + 3];
+
+			float w1 = weights[shift + 4 * i];
+			float w2 = weights[shift + 4 * i + 1];
+			float w3 = weights[shift + 4 * i + 2];
+			float w4 = weights[shift + 4 * i + 3];
+
+			//in the map we should set the weights for the vertex i for all keys j1, j2, j3 and j4
+			increase_envelop_weight_value(envelop_map, j1, w1, i, start_vertex_index, vertex_count);
+			increase_envelop_weight_value(envelop_map, j2, w2, i, start_vertex_index, vertex_count);
+			increase_envelop_weight_value(envelop_map, j3, w3, i, start_vertex_index, vertex_count);
+			increase_envelop_weight_value(envelop_map, j4, w4, i, start_vertex_index, vertex_count);
+		}
+	}
+}
+
+XSI::X3DObject import_mesh(const tinygltf::Model& model, 
+	const tinygltf::Mesh &mesh, 
+	const XSI::CString& object_name, 
+	const XSI::MATH::CTransformation &object_tfm,
+	XSI::X3DObject &parent_object,
+	const std::unordered_map<int, XSI::Material>& material_map, 
+	std::unordered_map<ULONG, std::vector<float>> &envelop_map,
+	const ImportMeshOptions& options)
 {
 	//create the mesh
 	XSI::X3DObject xsi_object;
@@ -248,6 +318,9 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 			primitives_material.push_back(material);
 			primitives_material_triangles.push_back(material_triangles);
 		}
+
+		std::vector<ULONG> skin_joints(0);
+		std::vector<float> skin_weights(0);
 
 		//save other attributes
 		for (const std::pair<const std::string, int>& attribute : primitive.attributes)
@@ -353,8 +426,31 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 				colors.clear();
 				colors.shrink_to_fit();
 			}
-			//also valid are: TANGENT, JOINTS_n, WEIGHTS_n
+			else if (attribute.first.find("JOINTS") == 0)
+			{
+				std::vector<ULONG> joints = get_integer_buffer(model, accessor);
+				skin_joints.reserve(skin_joints.size() + std::distance(joints.begin(), joints.end()));
+				skin_joints.insert(skin_joints.end(), joints.begin(), joints.end());
+			}
+			else if (attribute.first.find("WEIGHTS") == 0)
+			{
+				std::vector<float> weights = get_float_buffer(model, accessor);
+				skin_weights.reserve(skin_weights.size() + std::distance(weights.begin(), weights.end()));
+				skin_weights.insert(skin_weights.end(), weights.begin(), weights.end());
+			}
+			//also valid are: TANGENT
 		}
+
+		if (skin_joints.size() > 0 && skin_weights.size() > 0)
+		{
+			//these two arrays contains data from all envelop properties of the subobject
+			add_envelop_data(vertex_start_index, vertex_count, skin_joints, skin_weights, envelop_map);
+		}
+
+		skin_joints.clear();
+		skin_joints.shrink_to_fit();
+		skin_weights.clear();
+		skin_weights.shrink_to_fit();
 
 		//next shapes
 		//we supports only position shape, because Softimage can not allows to deform normals or tangents
@@ -403,26 +499,26 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 	XSI::CClusterPropertyBuilder cluster_builder = xsi_mesh.GetClusterPropertyBuilder();
 	for (auto const& pair : attributes_map)
 	{
-		std::string attr_name = pair.first;
-		const std::vector<float>& attr_data = pair.second;
-		
-		XSI::ClusterProperty cluster;
-		if (attr_name.compare("NORMAL") == 0)
-		{
-			cluster = cluster_builder.AddUserNormal(true);
-		}
-		else if (attr_name.find("TEXCOORD") == 0)
-		{
-			cluster = cluster_builder.AddUV();
-		}
-		else if (attr_name.find("COLOR") == 0)
-		{
-			cluster = cluster_builder.AddVertexColor();
-		}
-		if (cluster.IsValid())
-		{
-			cluster.SetValues(attr_data.data(), samples_start_index);
-		}
+	std::string attr_name = pair.first;
+	const std::vector<float>& attr_data = pair.second;
+
+	XSI::ClusterProperty cluster;
+	if (attr_name.compare("NORMAL") == 0)
+	{
+		cluster = cluster_builder.AddUserNormal(true);
+	}
+	else if (attr_name.find("TEXCOORD") == 0)
+	{
+		cluster = cluster_builder.AddUV();
+	}
+	else if (attr_name.find("COLOR") == 0)
+	{
+		cluster = cluster_builder.AddVertexColor();
+	}
+	if (cluster.IsValid())
+	{
+		cluster.SetValues(attr_data.data(), samples_start_index);
+	}
 	}
 
 	XSI::CValue io_value;
@@ -479,4 +575,56 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh &m
 	shapes_map.clear();
 
 	return xsi_object;
+}
+
+void import_skin(const tinygltf::Model& model,
+	XSI::X3DObject& xsi_object,
+	const int skin_index,
+	const std::unordered_map<ULONG, std::vector<float>>& envelope_data,
+	std::unordered_map<ULONG, XSI::X3DObject>& nodes_map)
+{
+	if (skin_index >= 0 && skin_index < model.skins.size() && xsi_object.GetType() == "polymsh")
+	{
+		XSI::PolygonMesh polymesh = xsi_object.GetActivePrimitive().GetGeometry();
+		XSI::CClusterPropertyBuilder cp_builder = polymesh.GetClusterPropertyBuilder();
+		XSI::CGeometryAccessor polymesh_acc = polymesh.GetGeometryAccessor();
+		LONG vertex_count = polymesh_acc.GetVertexCount();
+
+		tinygltf::Skin skin = model.skins[skin_index];
+		std::vector<int>& skin_joints = skin.joints;
+		XSI::CRefArray deformers(0);
+		std::vector<ULONG> proper_keys(0);
+		for (auto const& pair : envelope_data)
+		{
+			ULONG joint_index = pair.first;
+			if (joint_index < skin_joints.size())
+			{
+				ULONG joint_node_index = skin_joints[joint_index];
+				std::unordered_map<ULONG, XSI::X3DObject>::iterator joint_node_it = nodes_map.find(joint_node_index);
+				if (joint_node_it != nodes_map.end())
+				{
+					XSI::X3DObject& deformer = joint_node_it->second;
+					if (deformer.IsValid() && pair.second.size() == vertex_count)
+					{
+						deformers.Add(deformer);
+						proper_keys.push_back(joint_index);
+					}
+				}
+			}
+		}
+
+		if (proper_keys.size() > 0)
+		{
+			XSI::EnvelopeWeight ewp = cp_builder.AddEnvelopeWeight(deformers, true);
+
+			for (ULONG i = 0; i < proper_keys.size(); i++)
+			{
+				ewp.SetValues(deformers[i], envelope_data.at(proper_keys[i]).data(), vertex_count);
+			}
+		}
+
+		deformers.Clear();
+		proper_keys.clear();
+	}
+	
 }

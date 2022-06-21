@@ -72,8 +72,9 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\AnimatedTriangle.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\MorphPrimitivesTest.gltf");
 	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\SimpleMorph.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\InterpolationTest.gltf");
-	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\RiggedSimple.gltf");
+	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\InterpolationTest.gltf");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\RiggedSimple.gltf");
+	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\RiggedFigure.gltf");
 
 	return XSI::CStatus::OK;
 }

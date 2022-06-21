@@ -51,7 +51,8 @@ void process_node(const tinygltf::Model& model,
 	XSI::X3DObject &parent, 
 	const std::unordered_map<int, XSI::Material> &material_map, 
 	const ImportMeshOptions &mesh_options,
-	std::unordered_map<ULONG, XSI::X3DObject> &nodes_map)
+	std::unordered_map<ULONG, XSI::X3DObject> &nodes_map,
+	std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> &envelopes)
 {
 	//calculate node transform and recreate root transform for the child nodes
 	XSI::MATH::CTransformation local_tfm = import_transform(node);
@@ -66,7 +67,13 @@ void process_node(const tinygltf::Model& model,
 	{
 		//this node contains the mesh
 		tinygltf::Mesh mesh = model.meshes[node.mesh];
-		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, mesh_options);  // return last primitivefrom the mesh
+		std::unordered_map<ULONG, std::vector<float>> envelop_map; // key - deformer index in the skin property, value - array of weights for all vertices in the mesh (so, for subobjects we should extend these arrays)
+		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, envelop_map, mesh_options);  // return last primitivefrom the mesh
+
+		if (node.skin >= 0 && envelop_map.size() > 0)
+		{
+			envelopes.push_back(std::make_tuple(node.skin, next_parent, envelop_map));
+		}
 	}
 	else if (node.camera >= 0 && node.camera < model.cameras.size())
 	{
@@ -86,7 +93,7 @@ void process_node(const tinygltf::Model& model,
 
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options, nodes_map);
+		process_node(model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options, nodes_map, envelopes);
 	}
 }
 
@@ -136,18 +143,28 @@ bool import_gltf(const XSI::CString file_path)
 	}
 
 	std::unordered_map<ULONG, XSI::X3DObject> nodes_map;  // key - node index, value - corresponding object in the Softimage
+	std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> envelopes(0);  // store here envelopes data for mesh object int he scene
+	//each array element is a 3-tuple (model skin index (use it for actual deformers indices), Softimage polygonmesh obect, envelop data map (key - deformer indices, value - weights for all vertices int he mesh))
 
 	XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
 	XSI::Null node_null;
 	xsi_root.AddNull(scene_name, node_null);
 	for (size_t i = 0; i < scene.nodes.size(); ++i)
 	{
-		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options, nodes_map);
+		process_node(model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options, nodes_map, envelopes);
+	}
+
+	//after scene parsing we can setup the skin for each object
+	for (ULONG i = 0; i < envelopes.size(); i++)
+	{
+		auto t = envelopes[i];
+		import_skin(model, std::get<1>(t), std::get<0>(t), std::get<2>(t), nodes_map);
 	}
 
 	import_animation(model, nodes_map);
 
 	nodes_map.clear();
+	envelopes.clear();
 
 	return is_load;
 }
