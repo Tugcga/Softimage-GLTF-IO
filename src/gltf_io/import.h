@@ -24,4 +24,7 @@ bool import_gltf(const XSI::CString file_path,
 	const bool is_import_cameras,
 	const bool is_import_animations);
 
+std::vector<float> read_float_buffer_view(const tinygltf::Model& model, const tinygltf::BufferView& buffer_view, int component_type, size_t byte_offset, int32_t components, int count, bool decode_normalized);
 std::vector<float> get_float_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor, const bool decode_normalized = false);
+std::vector<ULONG> read_integer_buffer_view(const tinygltf::Model& model, const tinygltf::BufferView& buffer_view, int component_type, size_t byte_offset, int32_t components, int count);
+std::vector<ULONG> get_integer_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor);

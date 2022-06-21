@@ -19,46 +19,6 @@
 #include "../../utilities/utilities.h"
 #include "../import.h"
 
-std::vector<ULONG> get_integer_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
-{
-	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
-	int component_type = accessor.componentType;
-	std::vector<ULONG> to_return(components * accessor.count);
-
-	const tinygltf::BufferView& buffer_view = model.bufferViews[accessor.bufferView];
-	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
-
-	if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
-	{
-		const unsigned char* data = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-		for (size_t i = 0; i < accessor.count; ++i)
-		{
-			for (int32_t c = 0; c < components; c++)
-			{
-				to_return[components * i + c] = data[i * components + c];
-			}
-		}
-	}
-	else if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-	{
-		const unsigned short* data = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
-		for (size_t i = 0; i < accessor.count; ++i)
-		{
-			for (int32_t c = 0; c < components; c++)
-			{
-				to_return[components * i + c] = data[i * components + c];
-			}
-		}
-	}
-	else
-	{
-		std::vector<ULONG> empty(0);
-		return empty;
-	}
-
-	return to_return;
-}
-
 std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const ULONG first_index)
 {
 	const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
@@ -486,7 +446,42 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 
 					int shape_positions_index = gltf_shape.at("POSITION");
 					const tinygltf::Accessor& shape_accessor = model.accessors[shape_positions_index];
-					std::vector<float> shape_positions = get_float_buffer(model, shape_accessor);
+					std::vector<float> shape_positions(0);
+					if (shape_accessor.sparse.isSparse)
+					{
+						//for sparse accessor we can obtain positions only for several points
+						std::vector<float> values = read_float_buffer_view(
+							model,
+							model.bufferViews[shape_accessor.sparse.values.bufferView],
+							shape_accessor.componentType,
+							shape_accessor.sparse.values.byteOffset,
+							tinygltf::GetNumComponentsInType(shape_accessor.type),
+							shape_accessor.sparse.count,
+							false);
+
+						std::vector<ULONG> indices = read_integer_buffer_view(
+							model,
+							model.bufferViews[shape_accessor.sparse.indices.bufferView],
+							shape_accessor.sparse.indices.componentType,
+							shape_accessor.sparse.indices.byteOffset,
+							1,
+							shape_accessor.sparse.count);
+
+						shape_positions.resize(3 * vertex_count, 0.0);
+						for (ULONG i = 0; i < indices.size(); i++)
+						{
+							ULONG indx = indices[i];
+							shape_positions[3 * indx] = values[3 * i];
+							shape_positions[3 * indx + 1] = values[3 * i + 1];
+							shape_positions[3 * indx + 2] = values[3 * i + 2];
+						}
+					}
+					else
+					{
+						shape_positions = get_float_buffer(model, shape_accessor);
+						//this array contains deltas for point positions
+					}
+					//save readed values
 					if (shape_positions.size() > 0)
 					{
 						shape_data.reserve(shape_data.size() + std::distance(shape_positions.begin(), shape_positions.end()));
