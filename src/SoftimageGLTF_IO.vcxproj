@@ -62,6 +62,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include=".\SoftimageGLTF_IO.cpp" />
+    <ClCompile Include="gltf_io\export\export.cpp" />
     <ClCompile Include="gltf_io\import\import.cpp" />
     <ClCompile Include="gltf_io\import\import_animation.cpp" />
     <ClCompile Include="gltf_io\import\import_camera.cpp" />
@@ -73,6 +74,7 @@
     <ClCompile Include="utilities\string_proc.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="gltf_io\export.h" />
     <ClInclude Include="gltf_io\gltf_io.h" />
     <ClInclude Include="gltf_io\import.h" />
     <ClInclude Include="tiny_gltf\json.hpp" />

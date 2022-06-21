@@ -10,10 +10,12 @@
 #include <xsi_status.h>
 #include <xsi_command.h>
 #include <xsi_argument.h>
+#include <xsi_selection.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #include "utilities/utilities.h"
 #include "gltf_io/import.h"
+#include "gltf_io/export.h"
 
 SICALLBACK XSILoadPlugin(XSI::PluginRegistrar& in_reg)
 {
@@ -22,7 +24,7 @@ SICALLBACK XSILoadPlugin(XSI::PluginRegistrar& in_reg)
 	in_reg.PutVersion(1, 0);
 	//RegistrationInsertionPoint - do not remove this line
 	in_reg.RegisterCommand("GLTFImport", "GLTFImport");
-	//in_reg.RegisterCommand("GLTFExport", "GLTFExport");
+	in_reg.RegisterCommand("GLTFExport", "GLTFExport");
 
 	return XSI::CStatus::OK;
 }
@@ -94,6 +96,45 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 		log_message("To import GLTF/GLB select an existing file", XSI::siWarningMsg);
 	}
 	
+	return XSI::CStatus::OK;
+}
+
+SICALLBACK GLTFExport_Init(XSI::CRef& in_ctxt)
+{
+	XSI::Context ctxt(in_ctxt);
+	XSI::Command cmd;
+	cmd = ctxt.GetSource();
+	cmd.PutDescription("Export scene to the *.gltf file");
+	cmd.SetFlag(XSI::siNoLogging, false);
+
+	XSI::ArgumentArray args;
+	args = cmd.GetArguments();
+	XSI::CValueArray empty_array(0);
+	args.Add("objects", empty_array);
+	args.Add("file_path");
+	
+	return XSI::CStatus::OK;
+}
+
+SICALLBACK GLTFExport_Execute(XSI::CRef& in_ctxt)
+{
+	XSI::Context ctxt(in_ctxt);
+	XSI::CValueArray args = ctxt.GetAttribute("Arguments");
+
+	//extract input arguments
+	XSI::CString file_path = args[0];
+
+	if (true || file_path.Length() > 0)
+	{
+		XSI::Selection selection = XSI::Application().GetSelection();
+		XSI::CRefArray objects = selection.GetArray();
+		export_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\export\\exported_model.gltf", objects);
+	}
+	else
+	{
+		log_message("To export scene to GLTF/GLB file select a valid file path", XSI::siWarningMsg);
+	}
+
 	return XSI::CStatus::OK;
 }
 

@@ -15,6 +15,7 @@ XSI::CString to_string(const std::vector<LONG>& array);
 XSI::CString to_string(const std::vector<ULONG>& array);
 XSI::CString to_string(const std::vector<std::string>& array);
 
+std::string get_file_extension(const std::string& path);
 FileType detect_file_type(const std::string& path);
 
 XSI::CString file_name_from_path(const XSI::CString& file_path);

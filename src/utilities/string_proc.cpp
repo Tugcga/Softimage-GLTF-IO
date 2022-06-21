@@ -5,6 +5,16 @@
 
 #include "utilities.h"
 
+std::string get_file_extension(const std::string &path)
+{
+	std::string extension = path.substr(path.find_last_of('.') + 1);
+	std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](char c)
+	{
+		return char(::tolower(int(c)));
+	});
+	return extension;
+}
+
 FileType detect_file_type(const std::string& path)
 {
 	// Quickly open the file as binary and check if there's the gltf binary magic number
@@ -23,11 +33,7 @@ FileType detect_file_type(const std::string& path)
 	}
 
 	// If we don't have any better, check the file extension.
-	auto extension = path.substr(path.find_last_of('.') + 1);
-	std::transform(std::begin(extension), std::end(extension), std::begin(extension), [](char c)
-	{
-		return char(::tolower(int(c)));
-	});
+	std::string extension = get_file_extension(path);
 	if (extension == "gltf") return FileType::Ascii;
 	if (extension == "glb") return FileType::Binary;
 

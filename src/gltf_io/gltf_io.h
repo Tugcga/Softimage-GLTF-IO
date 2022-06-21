@@ -6,6 +6,7 @@
 #include <xsi_imageclip2.h>
 #include <xsi_scene.h>
 #include <xsi_progressbar.h>
+#include <xsi_transformation.h>
 
 #include "../tiny_gltf/tiny_gltf.h"
 
