@@ -83,63 +83,65 @@ void plot_animation(const std::vector<float> &times,
 			float t = (t_current - t_prev) / t_distance;
 
 			XSI::MATH::CVector3f value;  // store here result value
-
+			XSI::MATH::CVector3f v_prev;
+			XSI::MATH::CVector3f v_next;
+			XSI::MATH::CVector3f b_prev;
+			XSI::MATH::CVector3f a_next;
 			if (data_shift == 3)
 			{
-				XSI::MATH::CVector3f v_prev = XSI::MATH::CVector3f(values[data_length * point + data_shift], values[data_length * point + data_shift + 1], values[data_length * point + data_shift + 2]);
-				XSI::MATH::CVector3f v_next = XSI::MATH::CVector3f(values[data_length * (point + 1) + data_shift], values[data_length * (point + 1) + data_shift + 1], values[data_length * (point + 1) + data_shift + 2]);
-				XSI::MATH::CVector3f b_prev = XSI::MATH::CVector3f(values[data_length * point + 2 * data_shift], values[data_length * point + 2 * data_shift + 1], values[data_length * point + 2 * data_shift + 2]);
-				XSI::MATH::CVector3f a_next = XSI::MATH::CVector3f(values[data_length * (point + 1)], values[data_length * (point + 1) + 1], values[data_length * (point + 1) + 2]);
-
-				v_prev.ScaleInPlace(2 * t * t * t - 3 * t * t + 1);
-				b_prev.ScaleInPlace(t_distance * (t * t * t - 2 * t * t + t));
-				v_next.ScaleInPlace(-2 * t * t * t + 3 * t * t);
-				a_next.ScaleInPlace(t_distance * (t * t * t - t * t));
-
-				value.Add(v_prev, b_prev);
-				value.AddInPlace(v_next);
-				value.AddInPlace(a_next);
+				v_prev = XSI::MATH::CVector3f(values[data_length * point + data_shift], values[data_length * point + data_shift + 1], values[data_length * point + data_shift + 2]);
+				v_next = XSI::MATH::CVector3f(values[data_length * (point + 1) + data_shift], values[data_length * (point + 1) + data_shift + 1], values[data_length * (point + 1) + data_shift + 2]);
+				b_prev = XSI::MATH::CVector3f(values[data_length * point + 2 * data_shift], values[data_length * point + 2 * data_shift + 1], values[data_length * point + 2 * data_shift + 2]);
+				a_next = XSI::MATH::CVector3f(values[data_length * (point + 1)], values[data_length * (point + 1) + 1], values[data_length * (point + 1) + 2]);
 			}
 			else if (data_shift == 4)
 			{
-				float v_prev_scale = 2 * t * t * t - 3 * t * t + 1;
-				float b_prev_scsale = t_distance * (t * t * t - 2 * t * t + t);
-				float v_next_scale = -2 * t * t * t + 3 * t * t;
-				float a_next_scale = t_distance * (t * t * t - t * t);
-				XSI::MATH::CQuaternion v_prev = XSI::MATH::CQuaternion(v_prev_scale * values[data_length * point + data_shift], 
-					v_prev_scale * values[data_length * point + data_shift + 1],
-					v_prev_scale * values[data_length * point + data_shift + 2], 
-					v_prev_scale * values[data_length * point + data_shift + 3]);
-				XSI::MATH::CQuaternion v_next = XSI::MATH::CQuaternion(v_next_scale * values[data_length * (point + 1) + data_shift], 
-					v_next_scale * values[data_length * (point + 1) + data_shift + 1], 
-					v_next_scale * values[data_length * (point + 1) + data_shift + 2],
-					v_next_scale * values[data_length * (point + 1) + data_shift + 3]);
-				XSI::MATH::CQuaternion b_prev = XSI::MATH::CQuaternion(b_prev_scsale * values[data_length * point + 2 * data_shift], 
-					b_prev_scsale * values[data_length * point + 2 * data_shift + 1],
-					b_prev_scsale * values[data_length * point + 2 * data_shift + 2],
-					b_prev_scsale * values[data_length * point + 2 * data_shift + 3]);
-				XSI::MATH::CQuaternion a_next = XSI::MATH::CQuaternion(a_next_scale * values[data_length * (point + 1)],
-					a_next_scale * values[data_length * (point + 1) + 1],
-					a_next_scale * values[data_length * (point + 1) + 2], 
-					a_next_scale * values[data_length * (point + 1) + 3]);
+				XSI::MATH::CQuaternion v_prev_q = XSI::MATH::CQuaternion(values[data_length * point + data_shift], 
+					values[data_length * point + data_shift + 1],
+					values[data_length * point + data_shift + 2], 
+					values[data_length * point + data_shift + 3]);
+				XSI::MATH::CQuaternion v_next_q = XSI::MATH::CQuaternion(values[data_length * (point + 1) + data_shift],
+					values[data_length * (point + 1) + data_shift + 1], 
+					values[data_length * (point + 1) + data_shift + 2],
+					values[data_length * (point + 1) + data_shift + 3]);
+				XSI::MATH::CQuaternion b_prev_q = XSI::MATH::CQuaternion(values[data_length * point + 2 * data_shift],
+					values[data_length * point + 2 * data_shift + 1],
+					values[data_length * point + 2 * data_shift + 2],
+					values[data_length * point + 2 * data_shift + 3]);
+				XSI::MATH::CQuaternion a_next_q = XSI::MATH::CQuaternion(values[data_length * (point + 1)],
+					values[data_length * (point + 1) + 1],
+					values[data_length * (point + 1) + 2], 
+					values[data_length * (point + 1) + 3]);
 
-				XSI::MATH::CQuaternion value_quat;
-				value_quat.Add(v_prev, b_prev);
-				value_quat.AddInPlace(v_next);
-				value_quat.AddInPlace(a_next);
-
-				value_quat = value_quat.Normalize();
-
-				//extract eulear rotations
+				//extract Eulear angles and form vector3 values
 				double r_x;
 				double r_y;
 				double r_z;
-				value_quat.GetXYZAnglesValues(r_x, r_y, r_z);
+				v_prev_q.GetXYZAnglesValues(r_x, r_y, r_z);
+				v_prev = XSI::MATH::CVector3f(r_x, r_y, r_z);
+				v_prev.ScaleInPlace(180.0f / M_PI);
 
-				value.PutX(r_x * 180.0f / M_PI);
-				value.PutY(r_y * 180.0f / M_PI);
-				value.PutZ(r_z * 180.0f / M_PI);
+				v_next_q.GetXYZAnglesValues(r_x, r_y, r_z);
+				v_next = XSI::MATH::CVector3f(r_x, r_y, r_z);
+				v_next.ScaleInPlace(180.0f / M_PI);
+
+				b_prev_q.GetXYZAnglesValues(r_x, r_y, r_z);
+				b_prev = XSI::MATH::CVector3f(r_x, r_y, r_z);
+				b_prev.ScaleInPlace(180.0f / M_PI);
+
+				a_next_q.GetXYZAnglesValues(r_x, r_y, r_z);
+				a_next = XSI::MATH::CVector3f(r_x, r_y, r_z);
+				a_next.ScaleInPlace(180.0f / M_PI);
 			}
+
+			v_prev.ScaleInPlace(2 * t * t * t - 3 * t * t + 1);
+			b_prev.ScaleInPlace(t_distance * (t * t * t - 2 * t * t + t));
+			v_next.ScaleInPlace(-2 * t * t * t + 3 * t * t);
+			a_next.ScaleInPlace(t_distance * (t * t * t - t * t));
+
+			value.Add(v_prev, b_prev);
+			value.AddInPlace(v_next);
+			value.AddInPlace(a_next);
 
 			//set curve keys
 			x_curve.AddKey(i, value.GetX(), curve_type);
