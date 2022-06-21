@@ -5,6 +5,7 @@
 #include <xsi_parameter.h>
 #include <xsi_fcurve.h>
 #include <xsi_vector3f.h>
+#include <xsi_progressbar.h>
 
 #include "../../tiny_gltf/tiny_gltf.h"
 
@@ -151,11 +152,12 @@ void plot_animation(const std::vector<float> &times,
 	}
 }
 
-void import_animation(const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject> &nodes_map)
+void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject> &nodes_map)
 {
 	for (ULONG anim_index = 0; anim_index < model.animations.size(); anim_index++)
 	{
 		tinygltf::Animation animation = model.animations[anim_index];
+		bar.PutCaption("Animation " + XSI::CString(animation.name.c_str()));
 		for (ULONG channel_index = 0; channel_index < animation.channels.size(); channel_index++)
 		{
 			tinygltf::AnimationChannel channel = animation.channels[channel_index];
@@ -314,5 +316,7 @@ void import_animation(const tinygltf::Model& model, const std::unordered_map<ULO
 				values.shrink_to_fit();
 			}
 		}
+
+		bar.Increment();
 	}
 }

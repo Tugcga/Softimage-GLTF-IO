@@ -46,6 +46,16 @@ SICALLBACK GLTFImport_Init(XSI::CRef& in_ctxt)
 	XSI::ArgumentArray args;
 	args = cmd.GetArguments();
 	args.Add("file_path");
+	// mesh attributes
+	args.Add("import_normals", true);
+	args.Add("import_uvs", true);
+	args.Add("import_colors", true);
+	args.Add("import_shapes", true);
+	args.Add("import_skin", true);
+	//scene
+	args.Add("import_materials", true);
+	args.Add("import_cameras", true);
+	args.Add("import_animations", false);
 
 	return XSI::CStatus::OK;
 }
@@ -57,25 +67,33 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 
 	//extract input arguments
 	XSI::CString file_path = args[0];
+	bool import_normals = args[1];
+	bool import_uvs = args[2];
+	bool import_colors = args[3];
+	bool import_shapes = args[4];
+	bool import_skin = args[5];
 
-	//import_gltf(file_path);
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\cube_and_plane_01.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BrainStem.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoxVertexColors.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\colored_01.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\BoomBox.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Duck.glb");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\TextureTransformTest.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\box_3primitives.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\MultiUVTest.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\Cameras.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\AnimatedTriangle.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\MorphPrimitivesTest.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\SimpleMorph.gltf");
-	import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\InterpolationTest.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\RiggedSimple.gltf");
-	//import_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\RiggedFigure.gltf");
+	bool import_materials = args[6];
+	bool import_cameras = args[7];
+	bool import_animations = args[8];
 
+	if (file_path.Length() > 0 && is_file_exists(file_path))
+	{
+		import_gltf(file_path, 
+			import_normals,
+			import_uvs,
+			import_colors,
+			import_shapes,
+			import_skin,
+			import_materials,
+			import_cameras,
+			import_animations);
+	}
+	else
+	{
+		log_message("To import GLTF/GLB select an existing file", XSI::siWarningMsg);
+	}
+	
 	return XSI::CStatus::OK;
 }
 

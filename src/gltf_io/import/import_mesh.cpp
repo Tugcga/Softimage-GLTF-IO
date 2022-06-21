@@ -248,7 +248,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 	const XSI::CString& object_name, 
 	const XSI::MATH::CTransformation &object_tfm,
 	XSI::X3DObject &parent_object,
-	const std::unordered_map<int, XSI::Material>& material_map, 
+	std::unordered_map<int, XSI::Material>& material_map, 
 	std::unordered_map<ULONG, std::vector<float>> &envelop_map,
 	const ImportMeshOptions& options)
 {
@@ -306,9 +306,10 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 		polygon_sizes.shrink_to_fit();
 		
 		int material_index = primitive.material;
-		if (material_map.find(material_index) != material_map.end())
+		std::unordered_map<int, XSI::Material>::iterator material_it = material_map.find(material_index);
+		if (material_it != material_map.end())
 		{
-			XSI::Material material = material_map.at(material_index);
+			XSI::Material material = material_it->second;
 			//form array with triangle indices
 			std::vector<LONG> material_triangles(triangles_count);
 			for (ULONG i = 0; i < triangles_count; i++)
@@ -332,6 +333,15 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 			{
 				continue;
 			}
+			if ((attribute_name.compare("NORMAL") == 0 && !options.is_import_normals) || 
+				(attribute_name.find("TEXCOORD") == 0 && !options.is_import_uvs) ||
+				(attribute_name.find("COLOR") == 0 && !options.is_import_colors) ||
+				(attribute_name.find("JOINTS") == 0 && !options.is_import_skin) ||
+				(attribute_name.find("WEIGHTS") == 0 && !options.is_import_skin))
+			{
+				continue;
+			}
+
 			LONG attr_length = attribute_length(attribute_name);
 			if (attributes_map.find(attribute_name) == attributes_map.end())
 			{
@@ -350,7 +360,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 				attr_data.push_back(0.0f);
 			}
 
-			if (attribute.first.compare("NORMAL") == 0)
+			if (attribute_name.compare("NORMAL") == 0 && options.is_import_normals)
 			{
 				std::vector<float> normals = get_float_buffer(model, accessor);
 				if (normals.size() == 0)
@@ -371,7 +381,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 				normals.clear();
 				normals.shrink_to_fit();
 			}
-			else if (attribute.first.find("TEXCOORD") == 0)
+			else if (attribute_name.find("TEXCOORD") == 0 && options.is_import_uvs)
 			{
 				std::vector<float> uvs = get_float_buffer(model, accessor);
 				if (uvs.size() == 0)
@@ -391,7 +401,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 				uvs.clear();
 				uvs.shrink_to_fit();
 			}
-			else if (attribute.first.find("COLOR") == 0)
+			else if (attribute_name.find("COLOR") == 0 && options.is_import_colors)
 			{
 				std::vector<float> colors = get_float_buffer(model, accessor);
 				if (colors.size() == 0)
@@ -426,13 +436,13 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 				colors.clear();
 				colors.shrink_to_fit();
 			}
-			else if (attribute.first.find("JOINTS") == 0)
+			else if (attribute_name.find("JOINTS") == 0 && options.is_import_skin)
 			{
 				std::vector<ULONG> joints = get_integer_buffer(model, accessor);
 				skin_joints.reserve(skin_joints.size() + std::distance(joints.begin(), joints.end()));
 				skin_joints.insert(skin_joints.end(), joints.begin(), joints.end());
 			}
-			else if (attribute.first.find("WEIGHTS") == 0)
+			else if (attribute_name.find("WEIGHTS") == 0 && options.is_import_skin)
 			{
 				std::vector<float> weights = get_float_buffer(model, accessor);
 				skin_weights.reserve(skin_weights.size() + std::distance(weights.begin(), weights.end()));
@@ -441,7 +451,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 			//also valid are: TANGENT
 		}
 
-		if (skin_joints.size() > 0 && skin_weights.size() > 0)
+		if (skin_joints.size() > 0 && skin_weights.size() > 0 && options.is_import_skin)
 		{
 			//these two arrays contains data from all envelop properties of the subobject
 			add_envelop_data(vertex_start_index, vertex_count, skin_joints, skin_weights, envelop_map);
@@ -454,31 +464,34 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 
 		//next shapes
 		//we supports only position shape, because Softimage can not allows to deform normals or tangents
-		for (ULONG shape_index = 0; shape_index < primitive.targets.size(); shape_index++)
+		if (options.is_import_shapes)
 		{
-			std::map<std::string, int>& gltf_shape = primitive.targets[shape_index];
-			if (gltf_shape.find("POSITION") != gltf_shape.end())
+			for (ULONG shape_index = 0; shape_index < primitive.targets.size(); shape_index++)
 			{
-				//this shape contains positions data
-				if (shapes_map.find(shape_index) == shapes_map.end())
+				std::map<std::string, int>& gltf_shape = primitive.targets[shape_index];
+				if (gltf_shape.find("POSITION") != gltf_shape.end())
 				{
-					std::vector<float> shape_data(vertex_start_index * 3, 0.0f);
-					shapes_map[shape_index] = shape_data;
-				}
-				std::vector<float>& shape_data = shapes_map.at(shape_index);
-				LONG prev_size = shape_data.size();
-				for (LONG i = 0; i < vertex_start_index * 3 - prev_size; i++)
-				{
-					shape_data.push_back(0.0f);
-				}
+					//this shape contains positions data
+					if (shapes_map.find(shape_index) == shapes_map.end())
+					{
+						std::vector<float> shape_data(vertex_start_index * 3, 0.0f);
+						shapes_map[shape_index] = shape_data;
+					}
+					std::vector<float>& shape_data = shapes_map.at(shape_index);
+					LONG prev_size = shape_data.size();
+					for (LONG i = 0; i < vertex_start_index * 3 - prev_size; i++)
+					{
+						shape_data.push_back(0.0f);
+					}
 
-				int shape_positions_index = gltf_shape.at("POSITION");
-				const tinygltf::Accessor& shape_accessor = model.accessors[shape_positions_index];
-				std::vector<float> shape_positions = get_float_buffer(model, shape_accessor);
-				if (shape_positions.size() > 0)
-				{
-					shape_data.reserve(shape_data.size() + std::distance(shape_positions.begin(), shape_positions.end()));
-					shape_data.insert(shape_data.end(), shape_positions.begin(), shape_positions.end());
+					int shape_positions_index = gltf_shape.at("POSITION");
+					const tinygltf::Accessor& shape_accessor = model.accessors[shape_positions_index];
+					std::vector<float> shape_positions = get_float_buffer(model, shape_accessor);
+					if (shape_positions.size() > 0)
+					{
+						shape_data.reserve(shape_data.size() + std::distance(shape_positions.begin(), shape_positions.end()));
+						shape_data.insert(shape_data.end(), shape_positions.begin(), shape_positions.end());
+					}
 				}
 			}
 		}
@@ -499,46 +512,49 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 	XSI::CClusterPropertyBuilder cluster_builder = xsi_mesh.GetClusterPropertyBuilder();
 	for (auto const& pair : attributes_map)
 	{
-	std::string attr_name = pair.first;
-	const std::vector<float>& attr_data = pair.second;
+		std::string attr_name = pair.first;
+		const std::vector<float>& attr_data = pair.second;
 
-	XSI::ClusterProperty cluster;
-	if (attr_name.compare("NORMAL") == 0)
-	{
-		cluster = cluster_builder.AddUserNormal(true);
-	}
-	else if (attr_name.find("TEXCOORD") == 0)
-	{
-		cluster = cluster_builder.AddUV();
-	}
-	else if (attr_name.find("COLOR") == 0)
-	{
-		cluster = cluster_builder.AddVertexColor();
-	}
-	if (cluster.IsValid())
-	{
-		cluster.SetValues(attr_data.data(), samples_start_index);
-	}
+		XSI::ClusterProperty cluster;
+		if (attr_name.compare("NORMAL") == 0 && options.is_import_normals)
+		{
+			cluster = cluster_builder.AddUserNormal(true);
+		}
+		else if (attr_name.find("TEXCOORD") == 0 && options.is_import_uvs)
+		{
+			cluster = cluster_builder.AddUV();
+		}
+		else if (attr_name.find("COLOR") == 0 && options.is_import_colors)
+		{
+			cluster = cluster_builder.AddVertexColor();
+		}
+		if (cluster.IsValid())
+		{
+			cluster.SetValues(attr_data.data(), samples_start_index);
+		}
 	}
 
 	XSI::CValue io_value;
-	for (auto it = shapes_map.cbegin(); it != shapes_map.cend(); ++it)
+	if (options.is_import_shapes)
 	{
-		ULONG shape_index = it->first;
-		std::vector<float> shape_values = it->second;
+		for (auto it = shapes_map.cbegin(); it != shapes_map.cend(); ++it)
+		{
+			ULONG shape_index = it->first;
+			std::vector<float> shape_values = it->second;
 
-		XSI::ClusterProperty cluster = cluster_builder.AddShapeKey();
-		cluster.SetValues(shape_values.data(), vertex_start_index);
+			XSI::ClusterProperty cluster = cluster_builder.AddShapeKey();
+			cluster.SetValues(shape_values.data(), vertex_start_index);
 
-		//apply created shape key
-		//if we call the command, then the second shape is not visible in the shape manager
-		//may be we should call it with other parameters
-		/*XSI::CValueArray shape_args(8);
-		shape_args[0] = XSI::CValue(cluster);
-		shape_args[3] = XSI::CValue(3);
-		shape_args[5] = XSI::CValue(5);
-		shape_args[7] = XSI::CValue(2);
-		XSI::Application().ExecuteCommand("ApplyShapeKey", shape_args, io_value);*/
+			//apply created shape key
+			//if we call the command, then the second shape is not visible in the shape manager
+			//may be we should call it with other parameters
+			/*XSI::CValueArray shape_args(8);
+			shape_args[0] = XSI::CValue(cluster);
+			shape_args[3] = XSI::CValue(3);
+			shape_args[5] = XSI::CValue(5);
+			shape_args[7] = XSI::CValue(2);
+			XSI::Application().ExecuteCommand("ApplyShapeKey", shape_args, io_value);*/
+		}
 	}
 
 	if (primitives_material.size() > 0)

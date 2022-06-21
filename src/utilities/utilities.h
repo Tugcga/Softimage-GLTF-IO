@@ -19,3 +19,4 @@ FileType detect_file_type(const std::string& path);
 
 XSI::CString file_name_from_path(const XSI::CString& file_path);
 bool create_dir(const std::string& file_path);
+bool is_file_exists(const XSI::CString& file_path);

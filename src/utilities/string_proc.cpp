@@ -48,3 +48,8 @@ bool create_dir(const std::string& file_path)
 
 	return is_create;
 }
+
+bool is_file_exists(const XSI::CString &file_path)
+{
+	return std::experimental::filesystem::exists(std::string(file_path.GetAsciiString()));
+}
