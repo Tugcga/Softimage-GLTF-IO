@@ -78,13 +78,12 @@ int export_texture(tinygltf::Model& model, const ExportOptions& options, const X
 							tinygltf::Texture texture;
 							texture.name = clip.GetName().GetAsciiString();
 
-							int width, height, components;
-							unsigned char *data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
-
 							tinygltf::Image image;
 							//copy file from original location to the directory with output file
 							if(options.embed_images)
 							{ 
+								int width, height, components;
+								unsigned char* data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
 								image.uri = file_path.GetAsciiString();
 								image.width = width;
 								image.height = height;
