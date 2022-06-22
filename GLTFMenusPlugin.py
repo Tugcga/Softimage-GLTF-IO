@@ -16,7 +16,7 @@ def XSILoadPlugin(in_reg):
 
     # RegistrationInsertionPoint - do not remove this line
     in_reg.RegisterCommand("GLTFImportOpen", "GLTFImportOpen")
-    in_reg.RegisterMenu(constants.siMenuMainFileImportID, "Softimage GLTF", True, False)
+    in_reg.RegisterMenu(constants.siMenuMainFileImportID, "Softimage GLTF", False, False)
 
     return True
 
