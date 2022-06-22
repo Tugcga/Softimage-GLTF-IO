@@ -12,6 +12,8 @@
 #include <xsi_argument.h>
 #include <xsi_selection.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
 #include "utilities/utilities.h"
 #include "gltf_io/import.h"

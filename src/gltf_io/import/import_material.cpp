@@ -256,7 +256,7 @@ bool import_material(const tinygltf::Model& model, const tinygltf::Material &mat
 	emissiveFactor_param.PutParameterValue("blue", material.emissiveFactor[2]);
 
 	//next connect images
-	//get image intex for the texture
+	//get image index for the texture
 	//if it equal to -1, then this texture is not connected
 	XSI::Parameter baseColorTexture_param = xsi_params.GetItem("baseColorTexture");
 	XSI::Parameter metallicRoughnessTexture_param = xsi_params.GetItem("metallicRoughnessTexture");

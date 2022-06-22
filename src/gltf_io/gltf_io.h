@@ -12,6 +12,7 @@
 #include "../tiny_gltf/tiny_gltf.h"
 
 #include "import.h"
+#include "export.h"
 
 XSI::MATH::CTransformation import_transform(const tinygltf::Node& node);
 XSI::X3DObject import_mesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const XSI::CString &object_name, const XSI::MATH::CTransformation& object_tfm, XSI::X3DObject& parent_object, std::unordered_map<int, XSI::Material>& material_map, std::unordered_map<ULONG, std::vector<float>>& envelop_map, const ImportMeshOptions &options);
@@ -21,6 +22,8 @@ bool import_material(const tinygltf::Model& model, const tinygltf::Material& mat
 XSI::X3DObject import_camera(const tinygltf::Model& model, const tinygltf::Camera& camera, const XSI::CString& camera_name, const XSI::MATH::CTransformation& camera_tfm, XSI::X3DObject& parent_object);
 void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject>& nodes_map);
 
-tinygltf::Node export_node(const XSI::X3DObject& xsi_object, bool& is_correct);
+void export_material(tinygltf::Model& model, XSI::Material& xsi_material, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map);
+void export_mesh(tinygltf::Node& node, tinygltf::Model& model, XSI::X3DObject& xsi_object, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map);
+tinygltf::Node export_node(XSI::X3DObject& xsi_object, bool& is_correct, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map, tinygltf::Model& model);
 tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct, tinygltf::Model& model);
 void export_transform(const XSI::MATH::CTransformation& xsi_tfm, tinygltf::Node& node);

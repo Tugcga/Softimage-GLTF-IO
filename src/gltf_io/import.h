@@ -1,8 +1,6 @@
 #pragma once
 #include <xsi_application.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../tiny_gltf/tiny_gltf.h"
 
 struct ImportMeshOptions

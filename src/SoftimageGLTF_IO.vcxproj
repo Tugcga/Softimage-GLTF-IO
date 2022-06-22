@@ -64,6 +64,8 @@
     <ClCompile Include=".\SoftimageGLTF_IO.cpp" />
     <ClCompile Include="gltf_io\export\export.cpp" />
     <ClCompile Include="gltf_io\export\export_camera.cpp" />
+    <ClCompile Include="gltf_io\export\export_material.cpp" />
+    <ClCompile Include="gltf_io\export\export_mesh.cpp" />
     <ClCompile Include="gltf_io\export\export_node.cpp" />
     <ClCompile Include="gltf_io\export\export_transform.cpp" />
     <ClCompile Include="gltf_io\import\import.cpp" />

@@ -20,6 +20,9 @@ XSI::CString to_string(const std::vector<std::string>& array);
 std::string get_file_extension(const std::string& path);
 FileType detect_file_type(const std::string& path);
 
+XSI::CString full_file_name_from_path(const XSI::CString& file_path);
 XSI::CString file_name_from_path(const XSI::CString& file_path);
 bool create_dir(const std::string& file_path);
 bool is_file_exists(const XSI::CString& file_path);
+XSI::CString file_path_to_folder(const XSI::CString& file_path);
+bool is_extension_supported(const std::string& ext);

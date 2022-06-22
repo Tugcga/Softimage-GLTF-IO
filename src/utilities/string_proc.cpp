@@ -47,6 +47,12 @@ XSI::CString file_name_from_path(const XSI::CString &file_path)
 	return file_path.GetSubString(slash_position + 1, dot_position - slash_position - 1);
 }
 
+XSI::CString full_file_name_from_path(const XSI::CString& file_path)
+{
+	ULONG slash_position = file_path.ReverseFindString("\\");
+	return file_path.GetSubString(slash_position + 1);
+}
+
 bool create_dir(const std::string& file_path)
 {
 	std::error_code code;
@@ -58,4 +64,15 @@ bool create_dir(const std::string& file_path)
 bool is_file_exists(const XSI::CString &file_path)
 {
 	return std::experimental::filesystem::exists(std::string(file_path.GetAsciiString()));
+}
+
+XSI::CString file_path_to_folder(const XSI::CString &file_path)
+{
+	ULONG last_slash = file_path.ReverseFindString("\\");
+	return file_path.GetSubString(0, last_slash);
+}
+
+bool is_extension_supported(const std::string &ext)
+{
+	return ext == "png" || ext == "jpg" || ext == "jpeg";
 }

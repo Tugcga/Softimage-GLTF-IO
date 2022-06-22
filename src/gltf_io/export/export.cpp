@@ -5,9 +5,10 @@
 #include <xsi_camera.h>
 
 #include "../gltf_io.h"
+#include "../export.h"
 #include "../../utilities/utilities.h"
 
-int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::Model &model)
+int export_iterate(XSI::CRef &obj, const ExportOptions &options, std::set<ULONG> &exported_objects, std::unordered_map<ULONG, ULONG> &materials_map, std::unordered_map<ULONG, ULONG> &textures_map, tinygltf::Model &model)
 {
 	XSI::CString obj_class = obj.GetClassIDName();
 	int node_index = -1;
@@ -20,7 +21,7 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 		xsi_id = xsi_obj.GetObjectID();
 		if (exported_objects.find(xsi_id) == exported_objects.end())
 		{
-			tinygltf::Node new_node = export_node(xsi_obj, is_correct);
+			tinygltf::Node new_node = export_node(xsi_obj, is_correct, options, materials_map, textures_map, model);
 			exported_objects.insert(xsi_id);
 			if (is_correct)
 			{
@@ -58,7 +59,7 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 	for (ULONG i = 0; i < xsi_children.GetCount(); i++)
 	{
 		XSI::CRef child = xsi_children[i];
-		int child_index = export_iterate(child, exported_objects, model);
+		int child_index = export_iterate(child, options, exported_objects, materials_map, textures_map, model);
 		if (is_correct && child_index >= 0)
 		{
 			model.nodes[node_index].children.push_back(child_index);
@@ -70,14 +71,26 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 
 bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 {
+	XSI::CString output_path = file_path_to_folder(file_path);  // path without last //
+	ExportOptions options
+	{
+		true, // embed_images
+		false, // embed_buffers
+		output_path, // output_path
+	};
+
 	std::set<ULONG> exported_objects;  // store here id-s of exported objects
 	tinygltf::Model model;
 	tinygltf::Scene scene;
 
+	std::unordered_map<ULONG, ULONG> materials_map;  // key - material object id, value - index in the gltf materials list
+	std::unordered_map<ULONG, ULONG> textures_map; // key - image clip id, value - index of the texture in the gltf textures list
+	//we always use default samplers
+
 	for (ULONG i = 0; i < objects.GetCount(); i++)
 	{
 		XSI::CRef obj = objects[i];
-		int scene_node_index = export_iterate(obj, exported_objects, model);
+		int scene_node_index = export_iterate(obj, options, exported_objects, materials_map, textures_map, model);
 		if (scene_node_index >= 0)
 		{
 			scene.nodes.push_back(scene_node_index);
@@ -99,10 +112,10 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	std::string path_str = file_path.GetAsciiString();
 	std::string ext = get_file_extension(path_str);
 	gltf.WriteGltfSceneToFile(&model, path_str,
-		true, // embedImages
-		true, // embedBuffers
+		options.embed_images, // embedImages
+		options.embed_buffers, // embedBuffers
 		true, // pretty print
 		ext == "glb"); // write binary
-
+		
 	return true;
 }
