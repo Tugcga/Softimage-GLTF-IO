@@ -72,7 +72,7 @@ XSI::X3DObject import_camera(const tinygltf::Model& model, const tinygltf::Camer
 			fovtype_param.PutValue(0);
 
 			XSI::Parameter fov_param = camera_params.GetItem("fov");
-			fov_param.PutValue(camera.perspective.yfov * 180.0 / 3.1415);
+			fov_param.PutValue(camera.perspective.yfov * 180.0 / M_PI);
 
 			XSI::Parameter aspect_param = camera_params.GetItem("aspect");
 			aspect_param.PutValue(camera.perspective.aspectRatio);

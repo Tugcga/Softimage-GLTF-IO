@@ -13,7 +13,6 @@
 #include "../import.h"
 
 const float FRAMES_PER_SECOND = 30;  // use this hardcoded number for animation import
-const double M_PI = 3.14159265358979323846;
 
 void quaternion_to_angles(float x, float y, float z, float w, float &r_x, float &r_y, float &r_z)
 {

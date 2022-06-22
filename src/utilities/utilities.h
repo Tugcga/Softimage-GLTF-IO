@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+const double M_PI = 3.14159265358979323846;
+
 enum FileType { Ascii, Binary, Unknown };
 
 void log_message(const XSI::CString &message, const XSI::siSeverityType level = XSI::siSeverityType::siInfoMsg);

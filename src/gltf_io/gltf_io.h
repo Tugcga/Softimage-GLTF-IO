@@ -22,5 +22,5 @@ XSI::X3DObject import_camera(const tinygltf::Model& model, const tinygltf::Camer
 void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject>& nodes_map);
 
 tinygltf::Node export_node(const XSI::X3DObject& xsi_object, bool& is_correct);
-tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct);
+tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct, tinygltf::Model& model);
 void export_transform(const XSI::MATH::CTransformation& xsi_tfm, tinygltf::Node& node);

@@ -37,7 +37,7 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 		xsi_id = xsi_camera.GetObjectID();
 		if (exported_objects.find(xsi_id) == exported_objects.end())
 		{
-			tinygltf::Node new_node = export_camera(xsi_camera, is_correct);
+			tinygltf::Node new_node = export_camera(xsi_camera, is_correct, model);
 			exported_objects.insert(xsi_id);
 			if (is_correct)
 			{
