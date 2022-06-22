@@ -7,38 +7,19 @@
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
 
-tinygltf::Node export_node(XSI::X3DObject &xsi_object, bool &is_correct)
-{
-	log_message("export " + xsi_object.GetName());
-	tinygltf::Node new_node;
-	new_node.name = xsi_object.GetName().GetAsciiString();
-
-	is_correct = true;
-	return new_node;
-}
-
-tinygltf::Node export_camera(XSI::Camera &camera, bool& is_correct)
-{
-	log_message("export camera " + camera.GetName());
-	tinygltf::Node new_node;
-
-	new_node.name = camera.GetName().GetAsciiString();
-
-	is_correct = true;
-	return new_node;
-}
-
 int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::Model &model)
 {
 	XSI::CString obj_class = obj.GetClassIDName();
 	int node_index = -1;
+	ULONG xsi_id;
+	XSI::CRefArray xsi_children(0);
+	bool is_correct = false;
 	if (obj_class == "Null" || obj_class == "X3DObject" || obj_class == "Model" || obj_class == "CameraRig")
 	{
 		XSI::X3DObject xsi_obj(obj);
-		ULONG xsi_id = xsi_obj.GetObjectID();
+		xsi_id = xsi_obj.GetObjectID();
 		if (exported_objects.find(xsi_id) == exported_objects.end())
 		{
-			bool is_correct = false;
 			tinygltf::Node new_node = export_node(xsi_obj, is_correct);
 			exported_objects.insert(xsi_id);
 			if (is_correct)
@@ -47,25 +28,15 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 				model.nodes.push_back(new_node);
 			}
 
-			XSI::CRefArray xsi_children = xsi_obj.GetChildren();
-			for (ULONG i = 0; i < xsi_children.GetCount(); i++)
-			{
-				XSI::CRef child = xsi_children[i];
-				int child_index = export_iterate(child, exported_objects, model);
-				if (is_correct && child_index >= 0)
-				{
-					model.nodes[node_index].children.push_back(child_index);
-				}
-			}
+			xsi_children = xsi_obj.GetChildren();
 		}
 	}
 	else if (obj_class == "Camera")
 	{
 		XSI::Camera xsi_camera(obj);
-		ULONG xsi_id = xsi_camera.GetObjectID();
+		xsi_id = xsi_camera.GetObjectID();
 		if (exported_objects.find(xsi_id) == exported_objects.end())
 		{
-			bool is_correct = false;
 			tinygltf::Node new_node = export_camera(xsi_camera, is_correct);
 			exported_objects.insert(xsi_id);
 			if (is_correct)
@@ -73,17 +44,8 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 				node_index = model.nodes.size();
 				model.nodes.push_back(new_node);
 			}
+			xsi_children = xsi_camera.GetChildren();
 			
-			XSI::CRefArray xsi_children = xsi_camera.GetChildren();
-			for (ULONG i = 0; i < xsi_children.GetCount(); i++)
-			{
-				XSI::CRef child = xsi_children[i];
-				int child_index = export_iterate(child, exported_objects, model);
-				if (is_correct && child_index >= 0)
-				{
-					model.nodes[node_index].children.push_back(child_index);
-				}
-			}
 		}
 	}
 	else
@@ -91,6 +53,17 @@ int export_iterate(XSI::CRef &obj, std::set<ULONG> &exported_objects, tinygltf::
 		log_message("unknown object class " + obj_class);
 	}
 	//all other object are unsopported, skip it
+
+	//next iterate throw children subobjects
+	for (ULONG i = 0; i < xsi_children.GetCount(); i++)
+	{
+		XSI::CRef child = xsi_children[i];
+		int child_index = export_iterate(child, exported_objects, model);
+		if (is_correct && child_index >= 0)
+		{
+			model.nodes[node_index].children.push_back(child_index);
+		}
+	}
 
 	return node_index;
 }

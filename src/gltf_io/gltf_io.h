@@ -7,6 +7,7 @@
 #include <xsi_scene.h>
 #include <xsi_progressbar.h>
 #include <xsi_transformation.h>
+#include <xsi_camera.h>
 
 #include "../tiny_gltf/tiny_gltf.h"
 
@@ -19,3 +20,7 @@ void import_images(const tinygltf::Model& model, const XSI::Scene &scene, const 
 bool import_material(const tinygltf::Model& model, const tinygltf::Material& material, const int mat_index, XSI::MaterialLibrary& library, const std::unordered_map<int, XSI::CString>& image_map, const std::unordered_map<int, XSI::ImageClip2>& image_clips, std::unordered_map<int, XSI::Material> &material_map);
 XSI::X3DObject import_camera(const tinygltf::Model& model, const tinygltf::Camera& camera, const XSI::CString& camera_name, const XSI::MATH::CTransformation& camera_tfm, XSI::X3DObject& parent_object);
 void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject>& nodes_map);
+
+tinygltf::Node export_node(const XSI::X3DObject& xsi_object, bool& is_correct);
+tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct);
+void export_transform(const XSI::MATH::CTransformation& xsi_tfm, tinygltf::Node& node);
