@@ -109,6 +109,17 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 
 	//write output file
 	tinygltf::TinyGLTF gltf;
+
+	//does not need it
+	tinygltf::WriteImageDataFunction WriteImageData = &tinygltf::WriteImageData;
+	tinygltf::FsCallbacks fs = 
+	{
+		&tinygltf::FileExists, &tinygltf::ExpandFilePath,
+		&tinygltf::ReadWholeFile, &tinygltf::WriteWholeFile,
+		nullptr
+	};
+	gltf.SetImageWriter(WriteImageData, &fs);
+
 	std::string path_str = file_path.GetAsciiString();
 	std::string ext = get_file_extension(path_str);
 	gltf.WriteGltfSceneToFile(&model, path_str,

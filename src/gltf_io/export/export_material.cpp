@@ -89,24 +89,15 @@ int export_texture(tinygltf::Model& model, const ExportOptions& options, const X
 								texture.name = clip.GetName().GetAsciiString();
 
 								tinygltf::Image image;
-								//copy file from original location to the directory with output file
-								if (options.embed_images)
-								{
-									int width, height, components;
-									unsigned char* data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
-									image.uri = file_path.GetAsciiString();
-									image.width = width;
-									image.height = height;
-									image.component = components;
-									image.bits = 8;
-									image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
-									image.image.assign(data, data + width * height * components);
-								}
-								else
-								{
-									std::experimental::filesystem::copy_file(file_path.GetAsciiString(), XSI::CUtils::BuildPath(options.output_path, file_name).GetAsciiString(), copy_options);
-									image.uri = file_name.GetAsciiString();
-								}
+								int width, height, components;
+								unsigned char* data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
+								image.uri = file_path.GetAsciiString();
+								image.width = width;
+								image.height = height;
+								image.component = components;
+								image.bits = 8;
+								image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+								image.image.assign(data, data + width * height * components);
 
 								texture.source = model.images.size();
 								model.images.push_back(image);
