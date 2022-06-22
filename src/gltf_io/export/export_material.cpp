@@ -5,6 +5,7 @@
 #include <xsi_shader.h>
 #include <xsi_imageclip2.h>
 #include <xsi_utils.h>
+#include <xsi_image.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -73,44 +74,54 @@ int export_texture(tinygltf::Model& model, const ExportOptions& options, const X
 						XSI::CString file_path = clip.GetFileName();
 						XSI::CString file_name = full_file_name_from_path(file_path);
 						std::string ext = get_file_extension(file_name.GetAsciiString());
-						if (is_extension_supported(ext))
+						XSI::Image clip_image = clip.GetImage();
+						LONG image_channel_size = clip_image.GetChannelSize();
+						if (image_channel_size != 1)
 						{
-							tinygltf::Texture texture;
-							texture.name = clip.GetName().GetAsciiString();
-
-							tinygltf::Image image;
-							//copy file from original location to the directory with output file
-							if(options.embed_images)
-							{ 
-								int width, height, components;
-								unsigned char* data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
-								image.uri = file_path.GetAsciiString();
-								image.width = width;
-								image.height = height;
-								image.component = components;
-								image.bits = 8;
-								image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
-								image.image.assign(data, data + width * height * components);
-							}
-							else
-							{
-								std::experimental::filesystem::copy_file(file_path.GetAsciiString(), XSI::CUtils::BuildPath(options.output_path, file_name).GetAsciiString(), copy_options);
-								image.uri = file_name.GetAsciiString();
-							}
-
-							texture.source = model.images.size();
-							model.images.push_back(image);
-
-							//save texture to the model
-							textures_map[clip_id] = model.textures.size();
-							model.textures.push_back(texture);
-
-							return model.textures.size() - 1;
+							log_message("Texture " + file_name + " is not 8-bits per channel. Skip it", XSI::siWarningMsg);
+							return -1;
 						}
 						else
 						{
-							log_message("Extension of the texture " + file_name + " is not png or jpg. These files are not supported. Skip it", XSI::siWarningMsg);
-							return -1;
+							if (is_extension_supported(ext))
+							{
+								tinygltf::Texture texture;
+								texture.name = clip.GetName().GetAsciiString();
+
+								tinygltf::Image image;
+								//copy file from original location to the directory with output file
+								if (options.embed_images)
+								{
+									int width, height, components;
+									unsigned char* data = stbi_load(file_path.GetAsciiString(), &width, &height, &components, 0);
+									image.uri = file_path.GetAsciiString();
+									image.width = width;
+									image.height = height;
+									image.component = components;
+									image.bits = 8;
+									image.pixel_type = TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE;
+									image.image.assign(data, data + width * height * components);
+								}
+								else
+								{
+									std::experimental::filesystem::copy_file(file_path.GetAsciiString(), XSI::CUtils::BuildPath(options.output_path, file_name).GetAsciiString(), copy_options);
+									image.uri = file_name.GetAsciiString();
+								}
+
+								texture.source = model.images.size();
+								model.images.push_back(image);
+
+								//save texture to the model
+								textures_map[clip_id] = model.textures.size();
+								model.textures.push_back(texture);
+
+								return model.textures.size() - 1;
+							}
+							else
+							{
+								log_message("Extension of the texture " + file_name + " is not png or jpg. These files are not supported. Skip it", XSI::siWarningMsg);
+								return -1;
+							}
 						}
 					}
 					else
