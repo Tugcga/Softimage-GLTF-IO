@@ -12,12 +12,12 @@
 #include <xsi_argument.h>
 #include <xsi_selection.h>
 
+#include "gltf_io/export.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
 #include "utilities/utilities.h"
 #include "gltf_io/import.h"
-#include "gltf_io/export.h"
 
 SICALLBACK XSILoadPlugin(XSI::PluginRegistrar& in_reg)
 {

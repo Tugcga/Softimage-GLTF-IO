@@ -87,6 +87,9 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	std::unordered_map<ULONG, ULONG> textures_map; // key - image clip id, value - index of the texture in the gltf textures list
 	//we always use default samplers
 
+	tinygltf::Buffer data_buffer;  // we will store all binary data in this buffer
+	model.buffers.push_back(data_buffer);
+
 	for (ULONG i = 0; i < objects.GetCount(); i++)
 	{
 		XSI::CRef obj = objects[i];
@@ -127,6 +130,11 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 		options.embed_buffers, // embedBuffers
 		true, // pretty print
 		ext == "glb"); // write binary
-		
+
+	//clear buffers
+	exported_objects.clear();
+	materials_map.clear();
+	textures_map.clear();
+	
 	return true;
 }
