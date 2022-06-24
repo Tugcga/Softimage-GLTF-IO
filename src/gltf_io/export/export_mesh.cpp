@@ -179,7 +179,12 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 	}
 }
 
-void export_mesh(tinygltf::Node &node, tinygltf::Model& model, XSI::X3DObject& xsi_object, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map)
+void export_mesh(tinygltf::Node &node, 
+	tinygltf::Model& model, 
+	XSI::X3DObject& xsi_object, 
+	const ExportOptions& options, 
+	std::unordered_map<ULONG, ULONG>& materials_map, 
+	std::unordered_map<ULONG, ULONG> &textures_map)
 {
 	XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
 
@@ -394,6 +399,14 @@ void export_mesh(tinygltf::Node &node, tinygltf::Model& model, XSI::X3DObject& x
 				int indices = add_data_to_buffer(model, export_indices, true, TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT, TINYGLTF_TYPE_SCALAR);
 				prim.indices = indices;
 				write_mesh_data(model, prim, export_vertices);
+
+				ULONG materil_id = submesh_materials[submesh_index];
+				//try to find this material
+				auto mat_it = materials_map.find(materil_id);
+				if (mat_it != materials_map.end())
+				{
+					prim.material = mat_it->second;
+				}
 
 				mesh.primitives.push_back(prim);
 			}
