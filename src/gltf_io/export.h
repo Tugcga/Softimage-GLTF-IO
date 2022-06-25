@@ -22,6 +22,7 @@ struct Vertex
 	std::vector<float> colors;  // this array size is x4
 	std::vector<unsigned int> joints;  // store here numeric indices of deformers in the whole mesh list
 	std::vector<float> weights;  // the length of these two arrays should be the same (at the export we will split it to 4-tuples), write here only non-zero values
+	std::vector<float> shapes;// store here all vertex shift in shapes, this array size is x3
 
 	bool is_coincide(const Vertex& other)
 	{

@@ -260,6 +260,50 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 	normal_byte_vector.shrink_to_fit();
 }
 
+void write_shapes_data(tinygltf::Model &model, tinygltf::Primitive &prim, std::vector<Vertex>& vertices)
+{
+	if (vertices.size() > 0)
+	{
+		ULONG shapes_count = vertices[0].shapes.size() / 3;
+		for (ULONG shape_index = 0; shape_index < shapes_count; shape_index++)
+		{
+			//form float array of values
+			std::vector<float> shape(vertices.size() * 3);
+			std::vector<double> min_values(3, DBL_MAX);
+			std::vector<double> max_values(3, DBL_MIN);
+			for (ULONG v = 0; v < vertices.size(); v++)
+			{
+				const Vertex& vertex = vertices[v];
+				float x = vertex.shapes[3 * shape_index];
+				float y = vertex.shapes[3 * shape_index + 1];
+				float z = vertex.shapes[3 * shape_index + 2];
+				shape[3 * v] = x;
+				shape[3 * v + 1] = y;
+				shape[3 * v + 2] = z;
+
+				if (x < min_values[0]) { min_values[0] = x; }
+				if (x > max_values[0]) { max_values[0] = x; }
+
+				if (y < min_values[1]) { min_values[1] = y; }
+				if (y > max_values[1]) { max_values[1] = y; }
+
+				if (z < min_values[2]) { min_values[2] = z; }
+				if (z > max_values[2]) { max_values[2] = z; }
+			}
+
+			const unsigned char* shape_bytes = reinterpret_cast<const unsigned char*>(&shape[0]);
+			std::vector<unsigned char> shape_byte_vector(shape_bytes, shape_bytes + sizeof(float) * shape.size());
+
+			std::map<std::string, int> prim_shape;
+			prim_shape["POSITION"] = add_data_to_buffer(model, shape_byte_vector, vertices.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, min_values, max_values);
+			prim.targets.push_back(prim_shape);
+
+			shape_byte_vector.clear();
+			shape_byte_vector.shrink_to_fit();
+		}
+	}
+}
+
 void export_mesh(tinygltf::Node &node, 
 	tinygltf::Model& model, 
 	XSI::X3DObject& xsi_object, 
@@ -301,6 +345,7 @@ void export_mesh(tinygltf::Node &node,
 	XSI::CLongArray triangle_polygons;  // polygon index for each triangle
 	LONG triangles_count = xsi_acc.GetTriangleCount();
 	LONG nodes_count = xsi_acc.GetNodeCount();
+	ULONG vertex_count = xsi_acc.GetVertexCount();
 	xsi_acc.GetTriangleVertexIndices(triangle_vertices);
 	xsi_acc.GetTriangleNodeIndices(triangle_nodes);
 	xsi_acc.GetNodeNormals(node_normals);
@@ -358,6 +403,24 @@ void export_mesh(tinygltf::Node &node,
 		//so, we can write indexes from 0 to n and then in the skin propery write actual gltf indexes of the corresponding nodes
 		//when we export envelope for the mesh we should remember, that this object requires skin export after we export all scene hierarchy
 		envelope_deformers_count = envelope_data.GetDeformers().GetCount();
+	}
+
+	//shapes
+	XSI::CRefArray xsi_shapes = xsi_acc.GetShapeKeys();
+	ULONG shapes_count = xsi_shapes.GetCount();
+	std::vector<float> shapes_array(shapes_count * 3 * vertex_count);
+	for (ULONG i = 0; i < shapes_count; i++)
+	{
+		XSI::ClusterProperty shape_prop(xsi_shapes[i]);
+		XSI::CFloatArray shape_values;
+		shape_prop.GetValues(shape_values);
+		//copy values to the array
+		for (ULONG j = 0; j < vertex_count; j++)
+		{
+			shapes_array[vertex_count * 3 * i + 3 * j] = shape_values[3 * j];
+			shapes_array[vertex_count * 3 * i + 3 * j + 1] = shape_values[3 * j + 1];
+			shapes_array[vertex_count * 3 * i + 3 * j + 2] = shape_values[3 * j + 2];
+		}
 	}
 
 	//split the mesh into several submeshes
@@ -465,6 +528,15 @@ void export_mesh(tinygltf::Node &node,
 				}
 			}
 
+			//shapes
+			v.shapes.resize(3 * shapes_count, 0.0f);
+			for (ULONG shape_index = 0; shape_index < shapes_count; shape_index ++)
+			{
+				v.shapes[3 * shape_index] = shapes_array[3 * vertex_count * shape_index + 3 * vertex_index];
+				v.shapes[3 * shape_index + 1] = shapes_array[3 * vertex_count * shape_index + 3 * vertex_index + 1];
+				v.shapes[3 * shape_index + 2] = shapes_array[3 * vertex_count * shape_index + 3 * vertex_index + 2];
+			}
+
 			//try to find index in already created vertices
 			LONG known_index = -1;
 			bool is_mesh_vertex_new = false;
@@ -550,6 +622,9 @@ void export_mesh(tinygltf::Node &node,
 					prim.material = mat_it->second;
 				}
 
+				//export shapes (targets)
+				write_shapes_data(model, prim, export_vertices);
+
 				mesh.primitives.push_back(prim);
 			}
 		}
@@ -562,6 +637,13 @@ void export_mesh(tinygltf::Node &node,
 			model.skins.push_back(skin);
 
 			envelope_meshes.push_back(xsi_object);
+		}
+
+		//also for the mesh write weights of shapes
+		//TODO: try to obtain actual weights form shape manager (it use long and strange names)
+		for (ULONG shape_index = 0; shape_index < shapes_count; shape_index++)
+		{
+			mesh.weights.push_back(0.0);
 		}
 
 		node.mesh = model.meshes.size();
@@ -588,4 +670,6 @@ void export_mesh(tinygltf::Node &node,
 	uvs_array.shrink_to_fit();
 	submesh_weights_length.clear();
 	submesh_weights_length.shrink_to_fit();
+	shapes_array.clear();
+	shapes_array.shrink_to_fit();
 }

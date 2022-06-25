@@ -8,7 +8,7 @@
 
 #include "../../tiny_gltf/tiny_gltf.h"
 
-//find local transform of the object, global_tfm is global tfm of this object
+//find local transform of the object with respect to the parent, global_tfm is global tfm of this object
 //if parent of the given object cantains valid static kine state, then use it instead of ordinary global tfm
 XSI::MATH::CTransformation from_global_to_local(XSI::X3DObject& xsi_object, XSI::MATH::CTransformation& global_tfm)
 {
