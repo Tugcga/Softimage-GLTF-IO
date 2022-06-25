@@ -22,8 +22,10 @@ bool import_material(const tinygltf::Model& model, const tinygltf::Material& mat
 XSI::X3DObject import_camera(const tinygltf::Model& model, const tinygltf::Camera& camera, const XSI::CString& camera_name, const XSI::MATH::CTransformation& camera_tfm, XSI::X3DObject& parent_object);
 void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject>& nodes_map);
 
+XSI::MATH::CTransformation from_global_to_local(XSI::X3DObject& xsi_object, XSI::MATH::CTransformation& global_tfm);
+void export_skin(tinygltf::Model& model, const ULONG skin_index, XSI::X3DObject& xsi_object, const std::unordered_map<ULONG, ULONG>& object_to_node);
 void export_material(tinygltf::Model& model, XSI::Material& xsi_material, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map);
-void export_mesh(tinygltf::Node& node, tinygltf::Model& model, XSI::X3DObject& xsi_object, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map);
-tinygltf::Node export_node(XSI::X3DObject& xsi_object, bool& is_correct, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map, tinygltf::Model& model);
+void export_mesh(tinygltf::Node& node, tinygltf::Model& model, XSI::X3DObject& xsi_object, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map, std::vector<XSI::X3DObject>& envelope_meshes);
+tinygltf::Node export_node(XSI::X3DObject& xsi_object, bool& is_correct, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map, std::vector<XSI::X3DObject>& envelope_meshes, std::unordered_map<ULONG, ULONG>& object_to_node, tinygltf::Model& model);
 tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct, tinygltf::Model& model);
 void export_transform(const XSI::MATH::CTransformation& xsi_tfm, tinygltf::Node& node);

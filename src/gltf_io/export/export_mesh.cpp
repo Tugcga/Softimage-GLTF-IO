@@ -8,6 +8,7 @@
 #include <xsi_polygonmesh.h>
 #include <xsi_material.h>
 #include <xsi_vector3f.h>
+#include <xsi_envelopeweight.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -47,6 +48,15 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 	std::vector<float> normals(data.size() * 3);
 	ULONG uvs_count = data[0].uvs.size() / 2;  // we assume that all vertex has the same number of uv coordinates as the first vertex
 	ULONG colors_count = data[0].colors.size() / 4;
+	ULONG envelopes_count = data[0].weights.size() / 4;
+	std::vector<std::vector<float>> all_weights(envelopes_count);
+	std::vector<std::vector<unsigned short>> all_joints(envelopes_count);
+	for (ULONG e = 0; e < envelopes_count; e++)
+	{
+		all_weights[e].resize(4 * data.size(), 0.0f);
+		all_joints[e].resize(4 * data.size(), 0);
+	}
+
 	std::vector<std::vector<float>> uv_channels(uvs_count);
 	for (ULONG i = 0; i < uvs_count; i++)
 	{
@@ -136,6 +146,22 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 				if (a > colors_max[4 * i + 3]) { colors_max[4 * i + 3] = a; }
 			}
 		}
+
+		//envelope weights and joints
+		for (ULONG e = 0; e < envelopes_count; e++)
+		{
+			std::vector<float>& weights = all_weights[e];
+			std::vector<unsigned short>& joints = all_joints[e];
+			weights[4 * v] = vertex.weights[4 * e] / 100.0f;
+			weights[4 * v + 1] = vertex.weights[4 * e + 1] / 100.0f;
+			weights[4 * v + 2] = vertex.weights[4 * e + 2] / 100.0f;
+			weights[4 * v + 3] = vertex.weights[4 * e + 3] / 100.0f;
+
+			joints[4 * v] = vertex.joints[4 * e];
+			joints[4 * v + 1] = vertex.joints[4 * e + 1];
+			joints[4 * v + 2] = vertex.joints[4 * e + 2];
+			joints[4 * v + 3] = vertex.joints[4 * e + 3];
+		}
 	}
 
 	//next convert arrays to bytes
@@ -147,14 +173,12 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 	std::vector<unsigned char> normal_byte_vector(normal_bytes, normal_bytes + sizeof(float) * normals.size());
 
 	//assign positions attribute
-	int position_attr_index = add_data_to_buffer(model, position_byte_vector, data.size(), false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, min_values, max_values);
-	prim.attributes["POSITION"] = position_attr_index;
+	prim.attributes["POSITION"] = add_data_to_buffer(model, position_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, min_values, max_values);
 
 	//next normals attribute
 	min_values.clear();
 	max_values.clear();
-	int normal_attr_index = add_data_to_buffer(model, normal_byte_vector, data.size(), false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, min_values, max_values);
-	prim.attributes["NORMAL"] = normal_attr_index;
+	prim.attributes["NORMAL"] = add_data_to_buffer(model, normal_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC3, min_values, max_values);
 
 	//all uvs
 	for (ULONG i = 0; i < uvs_count; i++)
@@ -164,7 +188,10 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 		//extract min and max values
 		std::vector<double> uv_min{ uvs_min[2 * i], uvs_min[2*i + 1] };
 		std::vector<double> uv_max{ uvs_max[2 * i], uvs_max[2 * i + 1] };
-		prim.attributes["TEXCOORD_" + std::to_string(i)] = add_data_to_buffer(model, uv_byte_vector, data.size(), false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, uv_min, uv_max);
+		prim.attributes["TEXCOORD_" + std::to_string(i)] = add_data_to_buffer(model, uv_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC2, uv_min, uv_max);
+
+		uv_min.clear();
+		uv_max.clear();
 	}
 
 	//all colors
@@ -175,8 +202,62 @@ void write_mesh_data(tinygltf::Model& model, tinygltf::Primitive &prim, const st
 
 		std::vector<double> color_min{ colors_min[4 * i], colors_min[4 * i + 1], colors_min[4 * i + 2], colors_min[4 * i + 3] };
 		std::vector<double> color_max{ colors_max[4 * i], colors_max[4 * i + 1], colors_max[4 * i + 2], colors_max[4 * i + 3] };
-		prim.attributes["COLOR_" + std::to_string(i)] = add_data_to_buffer(model, color_byte_vector, data.size(), false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, color_min, color_max);
+		prim.attributes["COLOR_" + std::to_string(i)] = add_data_to_buffer(model, color_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, color_min, color_max);
+
+		color_byte_vector.clear();
+		color_byte_vector.shrink_to_fit();
+		color_min.clear();
+		color_min.shrink_to_fit();
+		color_max.clear();
+		color_max.shrink_to_fit();
 	}
+
+	//all weights and joints
+	for (ULONG e = 0; e < envelopes_count; e++)
+	{
+		const unsigned char* weight_bytes = reinterpret_cast<const unsigned char*>(&all_weights[e][0]);
+		std::vector<unsigned char> weight_byte_vector(weight_bytes, weight_bytes + sizeof(float) * all_weights[e].size());
+		prim.attributes["WEIGHTS_" + std::to_string(e)] = add_data_to_buffer(model, weight_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_FLOAT, TINYGLTF_TYPE_VEC4, min_values, max_values);
+
+		const unsigned char* joints_bytes = reinterpret_cast<const unsigned char*>(&all_joints[e][0]);
+		std::vector<unsigned char> joints_byte_vector(joints_bytes, joints_bytes + sizeof(float) * all_joints[e].size());
+		prim.attributes["JOINTS_" + std::to_string(e)] = add_data_to_buffer(model, joints_byte_vector, data.size(), false, false, TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT, TINYGLTF_TYPE_VEC4, min_values, max_values);
+
+		weight_byte_vector.clear();
+		weight_byte_vector.shrink_to_fit();
+		joints_byte_vector.clear();
+		joints_byte_vector.shrink_to_fit();
+	}
+
+	//clear temporary buffers
+	positions.clear();
+	positions.shrink_to_fit();
+	normals.clear();
+	normals.shrink_to_fit();
+	all_weights.clear();
+	all_weights.shrink_to_fit();
+	all_joints.clear();
+	all_joints.shrink_to_fit();
+	uv_channels.clear();
+	uv_channels.shrink_to_fit();
+	color_channels.clear();
+	color_channels.shrink_to_fit();
+	min_values.clear();
+	min_values.shrink_to_fit();
+	max_values.clear();
+	max_values.shrink_to_fit();
+	uvs_min.clear();
+	uvs_min.shrink_to_fit();
+	uvs_max.clear();
+	uvs_max.shrink_to_fit();
+	colors_min.clear();
+	colors_min.shrink_to_fit();
+	colors_max.clear();
+	colors_max.shrink_to_fit();
+	position_byte_vector.clear();
+	position_byte_vector.shrink_to_fit();
+	normal_byte_vector.clear();
+	normal_byte_vector.shrink_to_fit();
 }
 
 void export_mesh(tinygltf::Node &node, 
@@ -184,7 +265,8 @@ void export_mesh(tinygltf::Node &node,
 	XSI::X3DObject& xsi_object, 
 	const ExportOptions& options, 
 	std::unordered_map<ULONG, ULONG>& materials_map, 
-	std::unordered_map<ULONG, ULONG> &textures_map)
+	std::unordered_map<ULONG, ULONG> &textures_map,
+	std::vector<XSI::X3DObject> &envelope_meshes)
 {
 	XSI::PolygonMesh xsi_mesh = xsi_object.GetActivePrimitive().GetGeometry();
 
@@ -200,7 +282,7 @@ void export_mesh(tinygltf::Node &node,
 		ga_use_angle = ga_property.GetParameterValue("gapproxmoad");
 	}
 
-	XSI::CGeometryAccessor xsi_acc = xsi_mesh.GetGeometryAccessor(XSI::siConstructionModeSecondaryShape, XSI::siCatmullClark, subdivs, false, ga_use_angle, ga_angle);
+	XSI::CGeometryAccessor xsi_acc = xsi_mesh.GetGeometryAccessor(XSI::siConstructionModeModeling, XSI::siCatmullClark, subdivs, false, ga_use_angle, ga_angle);
 	
 	//export all assigned materials
 	XSI::CRefArray materials = xsi_acc.GetMaterials();  // materials here can be repeated, if different clusters has the same material
@@ -261,6 +343,23 @@ void export_mesh(tinygltf::Node &node,
 		}
 	}
 
+	//envelope weights
+	XSI::CRefArray xsi_envelopes = xsi_acc.GetEnvelopeWeights();
+	bool export_envelope = xsi_envelopes.GetCount() > 0;
+	XSI::CFloatArray envelope_weights;
+	ULONG envelope_deformers_count = 0;
+	//we should export only the first envelope data
+	if (export_envelope)
+	{
+		XSI::EnvelopeWeight envelope_data(xsi_envelopes[0]);
+		envelope_data.GetValues(envelope_weights);  // weights are per-point, not per-sample, it contains weights for each point and all deformers (start from first point and all deformers, then for the second point and so on)
+		//for export we sould write into each primitive weights and deformers and connect the skin index to the whole mesh
+		//in mesh attributes we should simply write joint indexes in the skin property
+		//so, we can write indexes from 0 to n and then in the skin propery write actual gltf indexes of the corresponding nodes
+		//when we export envelope for the mesh we should remember, that this object requires skin export after we export all scene hierarchy
+		envelope_deformers_count = envelope_data.GetDeformers().GetCount();
+	}
+
 	//split the mesh into several submeshes
 	//these arrays are the same size = the number of different materials
 	//we will get actual gltf material index next by using materials_map
@@ -306,6 +405,8 @@ void export_mesh(tinygltf::Node &node,
 	{
 		all_export_indices[i].resize(submesh_triangles[i].size() * 3);
 	}
+
+	std::vector<ULONG> submesh_weights_length(submesh_count, 0);  // store here the maximum length of the envelope data for each submesh
 	std::vector<std::unordered_map<LONG, std::set<ULONG>>> all_vertex_to_Vertex_map(submesh_count);  // key - vertex index in the mesh, value - set of already exported Vertex indices (in export_vertices array)
 	//use this map to check is created Vertex is new or one of previous Vertices
 	for (ULONG t = 0; t < triangles_count; t++)
@@ -341,6 +442,27 @@ void export_mesh(tinygltf::Node &node,
 				v.colors[4 * colors_index + 1] = colors_array[4 * nodes_count * colors_index + 4 * node_index + 1];
 				v.colors[4 * colors_index + 2] = colors_array[4 * nodes_count * colors_index + 4 * node_index + 2];
 				v.colors[4 * colors_index + 3] = colors_array[4 * nodes_count * colors_index + 4 * node_index + 3];
+			}
+
+			//envelope weights
+			if (export_envelope && envelope_weights.GetCount() > 0 && envelope_deformers_count > 0)
+			{
+				//we should select the segment of actual weights for the given vertex
+				ULONG length = 0;
+				for (ULONG d = 0; d < envelope_deformers_count; d++)
+				{
+					float env_value = envelope_weights[envelope_deformers_count * vertex_index + d];
+					if (env_value > EPSILON)
+					{
+						v.weights.push_back(env_value);
+						v.joints.push_back(d);
+						length++;
+					}
+				}
+				if (submesh_weights_length[submesh_index] < length)
+				{
+					submesh_weights_length[submesh_index] = length;
+				}
 			}
 
 			//try to find index in already created vertices
@@ -380,6 +502,26 @@ void export_mesh(tinygltf::Node &node,
 		}
 	}
 
+	//after we form all Vertices, we should align sizes of envelope data inside each submesh
+	if (export_envelope)
+	{
+		for (ULONG submesh_index = 0; submesh_index < submesh_count; submesh_index++)
+		{
+			ULONG length = submesh_weights_length[submesh_index];
+			if (length > 0)
+			{
+				//set the length x4
+				length = 4 * ((length / 4) + (length % 4 == 0 ? 0 : 1));
+				std::vector<Vertex>& vertices = all_export_vertices[submesh_index];
+				for (ULONG v = 0; v < vertices.size(); v++)
+				{
+					vertices[v].weights.resize(length, 0.0f);
+					vertices[v].joints.resize(length, 0);
+				}
+			}
+		}
+	}
+
 	//next we should export each submesh as mesh primitive
 	if (submesh_count > 0)
 	{
@@ -396,7 +538,7 @@ void export_mesh(tinygltf::Node &node,
 			const std::vector<unsigned int>& export_indices = all_export_indices[submesh_index];
 			if (export_vertices.size() > 0 && export_indices.size() > 0)
 			{
-				int indices = add_data_to_buffer(model, export_indices, true, TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT, TINYGLTF_TYPE_SCALAR);
+				int indices = add_triangle_indices_to_buffer(model, export_indices, TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT, TINYGLTF_TYPE_SCALAR);
 				prim.indices = indices;
 				write_mesh_data(model, prim, export_vertices);
 
@@ -410,6 +552,16 @@ void export_mesh(tinygltf::Node &node,
 
 				mesh.primitives.push_back(prim);
 			}
+		}
+
+		if (export_envelope)
+		{
+			//add skin to the mesh, but later we should setup this skin property
+			tinygltf::Skin skin;
+			node.skin = model.skins.size();
+			model.skins.push_back(skin);
+
+			envelope_meshes.push_back(xsi_object);
 		}
 
 		node.mesh = model.meshes.size();
@@ -434,4 +586,6 @@ void export_mesh(tinygltf::Node &node,
 	colors_array.shrink_to_fit();
 	uvs_array.clear();
 	uvs_array.shrink_to_fit();
+	submesh_weights_length.clear();
+	submesh_weights_length.shrink_to_fit();
 }

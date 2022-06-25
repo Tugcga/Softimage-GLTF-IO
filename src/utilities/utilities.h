@@ -23,11 +23,13 @@ XSI::CString to_string(const std::vector<LONG>& array);
 XSI::CString to_string(const std::vector<ULONG>& array);
 XSI::CString to_string(const std::vector<std::string>& array);
 XSI::CString to_string(const std::vector<unsigned char>& array);
+XSI::CString to_string(const std::vector<unsigned int>& array);
 XSI::CString to_string(const XSI::CLongArray &array);
 XSI::CString to_string(const XSI::CDoubleArray& array);
 XSI::CString to_string(const XSI::CFloatArray& array);
 XSI::CString to_string(const std::set<ULONG> &set);
 XSI::CString to_string(const std::vector<Vertex>& array);
+XSI::CString to_string(const XSI::MATH::CMatrix4& m);
 
 std::string get_file_extension(const std::string& path);
 FileType detect_file_type(const std::string& path);

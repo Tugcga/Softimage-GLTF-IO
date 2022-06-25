@@ -82,6 +82,17 @@ XSI::CString to_string(const std::vector<unsigned char>& array)
 	return to_return;
 }
 
+XSI::CString to_string(const std::vector<unsigned int>& array)
+{
+	XSI::CString to_return = XSI::CString(array.size()) + ": [";
+	for (size_t i = 0; i < array.size(); i++)
+	{
+		to_return += XSI::CString((int)array[i]) + (i == array.size() - 1 ? "]" : ", ");
+	}
+
+	return to_return;
+}
+
 XSI::CString to_string(const XSI::CLongArray &array)
 {
 	XSI::CString to_return = XSI::CString(array.GetCount()) + ": [";
@@ -139,5 +150,20 @@ XSI::CString to_string(const std::vector<Vertex> &array)
 		to_return += s + (i == array.size() - 1 ? "]" : ", ");
 	}
 
+	return to_return;
+}
+
+XSI::CString to_string(const XSI::MATH::CMatrix4 &m)
+{
+	XSI::CString to_return = "";
+	for (ULONG i = 0; i < 4; i++)
+	{
+		XSI::CString part = "";
+		for (ULONG j = 0; j < 4; j++)
+		{
+			part += XSI::CString(m.GetValue(i, j)) + " ";
+		}
+		to_return += part + " | ";
+	}
 	return to_return;
 }

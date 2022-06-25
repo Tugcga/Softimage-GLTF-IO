@@ -8,7 +8,14 @@
 #include "../export.h"
 #include "../../utilities/utilities.h"
 
-int export_iterate(XSI::CRef &obj, const ExportOptions &options, std::set<ULONG> &exported_objects, std::unordered_map<ULONG, ULONG> &materials_map, std::unordered_map<ULONG, ULONG> &textures_map, tinygltf::Model &model)
+int export_iterate(XSI::CRef &obj, 
+	const ExportOptions &options, 
+	std::set<ULONG> &exported_objects, 
+	std::unordered_map<ULONG, ULONG> &materials_map, 
+	std::unordered_map<ULONG, ULONG> &textures_map, 
+	std::vector<XSI::X3DObject> &envelope_meshes,
+	std::unordered_map<ULONG, ULONG> &object_to_node,
+	tinygltf::Model &model)
 {
 	XSI::CString obj_class = obj.GetClassIDName();
 	int node_index = -1;
@@ -21,12 +28,13 @@ int export_iterate(XSI::CRef &obj, const ExportOptions &options, std::set<ULONG>
 		xsi_id = xsi_obj.GetObjectID();
 		if (exported_objects.find(xsi_id) == exported_objects.end())
 		{
-			tinygltf::Node new_node = export_node(xsi_obj, is_correct, options, materials_map, textures_map, model);
+			tinygltf::Node new_node = export_node(xsi_obj, is_correct, options, materials_map, textures_map, envelope_meshes, object_to_node, model);
 			exported_objects.insert(xsi_id);
 			if (is_correct)
 			{
 				node_index = model.nodes.size();
 				model.nodes.push_back(new_node);
+				object_to_node[xsi_id] = node_index;
 			}
 
 			xsi_children = xsi_obj.GetChildren();
@@ -59,7 +67,7 @@ int export_iterate(XSI::CRef &obj, const ExportOptions &options, std::set<ULONG>
 	for (ULONG i = 0; i < xsi_children.GetCount(); i++)
 	{
 		XSI::CRef child = xsi_children[i];
-		int child_index = export_iterate(child, options, exported_objects, materials_map, textures_map, model);
+		int child_index = export_iterate(child, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
 		if (is_correct && child_index >= 0)
 		{
 			model.nodes[node_index].children.push_back(child_index);
@@ -86,6 +94,8 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	std::unordered_map<ULONG, ULONG> materials_map;  // key - material object id, value - index in the gltf materials list
 	std::unordered_map<ULONG, ULONG> textures_map; // key - image clip id, value - index of the texture in the gltf textures list
 	//we always use default samplers
+	std::vector<XSI::X3DObject> envelope_meshes;
+	std::unordered_map<ULONG, ULONG> object_to_node;  // map from Softimage object id to gltf node index
 
 	tinygltf::Buffer data_buffer;  // we will store all binary data in this buffer
 	model.buffers.push_back(data_buffer);
@@ -93,11 +103,17 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	for (ULONG i = 0; i < objects.GetCount(); i++)
 	{
 		XSI::CRef obj = objects[i];
-		int scene_node_index = export_iterate(obj, options, exported_objects, materials_map, textures_map, model);
+		int scene_node_index = export_iterate(obj, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
 		if (scene_node_index >= 0)
 		{
 			scene.nodes.push_back(scene_node_index);
 		}
+	}
+
+	//export second part of the skin
+	for (ULONG i = 0; i < envelope_meshes.size(); i++)
+	{
+		export_skin(model, i, envelope_meshes[i], object_to_node);
 	}
 
 	scene.name = file_name_from_path(file_path).GetAsciiString();
@@ -135,6 +151,9 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	exported_objects.clear();
 	materials_map.clear();
 	textures_map.clear();
+	envelope_meshes.clear();
+	envelope_meshes.shrink_to_fit();
+	object_to_node.clear();
 	
 	return true;
 }

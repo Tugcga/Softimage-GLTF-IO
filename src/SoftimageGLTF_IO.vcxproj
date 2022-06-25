@@ -68,6 +68,7 @@
     <ClCompile Include="gltf_io\export\export_material.cpp" />
     <ClCompile Include="gltf_io\export\export_mesh.cpp" />
     <ClCompile Include="gltf_io\export\export_node.cpp" />
+    <ClCompile Include="gltf_io\export\export_skin.cpp" />
     <ClCompile Include="gltf_io\export\export_transform.cpp" />
     <ClCompile Include="gltf_io\import\import.cpp" />
     <ClCompile Include="gltf_io\import\import_animation.cpp" />

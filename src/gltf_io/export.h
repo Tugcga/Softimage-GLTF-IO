@@ -20,6 +20,8 @@ struct Vertex
 	XSI::MATH::CVector3f normal;
 	std::vector<float> uvs;  // store all uvs here, so, the length of the array is x2
 	std::vector<float> colors;  // this array size is x4
+	std::vector<unsigned int> joints;  // store here numeric indices of deformers in the whole mesh list
+	std::vector<float> weights;  // the length of these two arrays should be the same (at the export we will split it to 4-tuples), write here only non-zero values
 
 	bool is_coincide(const Vertex& other)
 	{
@@ -55,5 +57,6 @@ struct Vertex
 
 bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects);
 
-int add_data_to_buffer(tinygltf::Model& model, std::vector<unsigned char>& byte_vector, ULONG data_count, const bool is_indices, const int component_type, const int data_type, std::vector<double> min_value, std::vector<double> max_value);
-int add_data_to_buffer(tinygltf::Model& model, const std::vector<unsigned int>& data, const bool is_indices, const int component_type, const int data_type);
+int add_data_to_buffer(tinygltf::Model& model, std::vector<unsigned char>& byte_vector, ULONG data_count, const bool is_indices, const bool ignore_target, const int component_type, const int data_type, std::vector<double> min_value, std::vector<double> max_value);
+int add_triangle_indices_to_buffer(tinygltf::Model& model, const std::vector<unsigned int>& data, const int component_type, const int data_type);
+int add_float_to_buffer(tinygltf::Model& model, const std::vector<float>& data, const bool ignore_target, const int component_type, const int data_type);
