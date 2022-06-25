@@ -603,6 +603,38 @@ void import_skin(const tinygltf::Model& model,
 
 		tinygltf::Skin skin = model.skins[skin_index];
 		std::vector<int>& skin_joints = skin.joints;
+		if (skin.inverseBindMatrices >= 0)
+		{
+			std::vector<float> ibm = get_float_buffer(model, model.accessors[skin.inverseBindMatrices]);
+			//from these matrices we can extract global transform of the skinned object
+			//we can use, for example, the first deformer
+			ULONG node_i = envelope_data.begin()->first;
+			if (node_i >= 0 && node_i < skin_joints.size())
+			{
+				ULONG node_index = skin_joints[node_i];
+				std::unordered_map<ULONG, XSI::X3DObject>::iterator node_it = nodes_map.find(node_index);
+				if (node_it != nodes_map.end())
+				{
+					XSI::X3DObject& first_deformer = node_it->second;
+					//get the global transform matrix
+					XSI::MATH::CMatrix4 d_m = first_deformer.GetKinematics().GetGlobal().GetTransform().GetMatrix4();
+					//build the matrix from ibm
+					XSI::MATH::CMatrix4 m;
+					for (ULONG i = 0; i < 4; i++)
+					{
+						for (ULONG j = 0; j < 4; j++)
+						{
+							m.SetValue(i, j, ibm[16 * node_i + 4 * i + j]);
+						}
+					}
+					XSI::MATH::CMatrix4 obj_global_m;
+					obj_global_m.Mul(m, d_m);
+					XSI::MATH::CTransformation obj_global_tfm;
+					obj_global_tfm.SetMatrix4(obj_global_m);
+					xsi_object.GetKinematics().GetGlobal().PutTransform(obj_global_tfm);
+				}
+			}
+		}
 		XSI::CRefArray deformers(0);
 		std::vector<ULONG> proper_keys(0);
 		for (auto const& pair : envelope_data)
