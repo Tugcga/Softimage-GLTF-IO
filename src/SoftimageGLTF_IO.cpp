@@ -60,6 +60,7 @@ SICALLBACK GLTFImport_Init(XSI::CRef& in_ctxt)
 	args.Add("import_materials", true);
 	args.Add("import_cameras", true);
 	args.Add("import_animations", false);
+	args.Add("animation_frames_per_second", 30.0f);
 
 	return XSI::CStatus::OK;
 }
@@ -81,6 +82,8 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 	bool import_cameras = args[7];
 	bool import_animations = args[8];
 
+	float animation_frames_per_second = args[9];
+
 	if (file_path.Length() > 0 && is_file_exists(file_path))
 	{
 		import_gltf(file_path, 
@@ -91,7 +94,8 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 			import_skin,
 			import_materials,
 			import_cameras,
-			import_animations);
+			import_animations,
+			animation_frames_per_second);
 	}
 	else
 	{

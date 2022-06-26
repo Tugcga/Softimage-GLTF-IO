@@ -210,7 +210,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 	XSI::X3DObject &parent_object,
 	std::unordered_map<int, XSI::Material>& material_map, 
 	std::unordered_map<ULONG, std::vector<float>> &envelop_map,
-	const ImportMeshOptions& options)
+	const ImportOptions& options)
 {
 	//create the mesh
 	XSI::X3DObject xsi_object;

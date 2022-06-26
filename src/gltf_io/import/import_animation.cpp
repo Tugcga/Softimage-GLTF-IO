@@ -12,8 +12,6 @@
 #include "../../utilities/utilities.h"
 #include "../import.h"
 
-const float FRAMES_PER_SECOND = 30;  // use this hardcoded number for animation import
-
 void quaternion_to_angles(float x, float y, float z, float w, float &r_x, float &r_y, float &r_z)
 {
 	float sinr_cosp = 2 * (w * x + y * z);
@@ -39,23 +37,24 @@ void plot_animation(const std::vector<float> &times,
 	const std::vector<float> & values,
 	ULONG data_length, ULONG data_shift,
 	const XSI::siFCurveKeyInterpolation curve_type,
-	XSI::FCurve &x_curve, XSI::FCurve& y_curve, XSI::FCurve& z_curve)
+	XSI::FCurve &x_curve, XSI::FCurve& y_curve, XSI::FCurve& z_curve,
+	float animation_frames_per_second)
 {
 	//we assume that input time is orderer in increasing order
 	//get the minimum and maximum time
-	int min_frame = int(times[0] * FRAMES_PER_SECOND);
-	int max_frame = int(times[times.size() - 1] * FRAMES_PER_SECOND);
+	int min_frame = int(times[0] * animation_frames_per_second);
+	int max_frame = int(times[times.size() - 1] * animation_frames_per_second);
 	int point = 0;
 	for (int i = min_frame; i < max_frame + 1; i++)
 	{
-		float t_current = (i - min_frame) / FRAMES_PER_SECOND;
+		float t_current = (i - min_frame) / animation_frames_per_second;
 		//for each integer frame we should find the greatest key, less the current value
 		//increase point value while obtain greater value than i
 		bool is_increase = true;
 		while (is_increase)
 		{
 			//calculate frame at next point
-			float v = times[point + 1] * FRAMES_PER_SECOND;
+			float v = times[point + 1] * animation_frames_per_second;
 			if (v > i)
 			{
 				is_increase = false;
@@ -151,7 +150,7 @@ void plot_animation(const std::vector<float> &times,
 	}
 }
 
-void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject> &nodes_map)
+void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const std::unordered_map<ULONG, XSI::X3DObject> &nodes_map, const ImportOptions &options)
 {
 	for (ULONG anim_index = 0; anim_index < model.animations.size(); anim_index++)
 	{
@@ -200,14 +199,14 @@ void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const
 								//for cubic interpolation we should bake transform to each frame
 								curve_type = XSI::siLinearKeyInterpolation;
 
-								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve);
+								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve, options.animation_frames_per_second);
 							}
 							else
 							{
 								//for non-cubic interpolation we simply set keys
 								for (ULONG i = 0; i < times.size(); i++)
 								{
-									float time = times[i] * FRAMES_PER_SECOND;
+									float time = times[i] * options.animation_frames_per_second;
 									//set values to fcurves
 									x_curve.AddKey(time, values[data_length * i + data_shift], curve_type);
 									y_curve.AddKey(time, values[data_length * i + data_shift + 1], curve_type);
@@ -243,13 +242,13 @@ void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const
 
 								//WARNING: result animation is incorrect
 								//may be we use wrong interpolation formula (the same as for 3d-vectors), or may be this is result of ambiguous quaternion convertion into Eulear angles
-								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve);
+								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve, options.animation_frames_per_second);
 							}
 							else
 							{
 								for (ULONG i = 0; i < times.size(); i++)
 								{
-									float time = times[i] * FRAMES_PER_SECOND;
+									float time = times[i] * options.animation_frames_per_second;
 									XSI::MATH::CQuaternion r(XSI::MATH::CVector4(values[4 * i], values[4 * i + 1], values[4 * i + 2], values[4 * i + 3]));
 									//NOTE: there are some problems with conversion from quaternion to axis angles
 									//in gltf values store in one format, but after extracting rotation the Softimage shift it by period 2 * M_PI
@@ -288,13 +287,13 @@ void import_animation(XSI::ProgressBar& bar, const tinygltf::Model& model, const
 							if (curve_type == XSI::siCubicKeyInterpolation)
 							{
 								curve_type = XSI::siLinearKeyInterpolation;
-								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve);
+								plot_animation(times, values, data_length, data_shift, curve_type, x_curve, y_curve, z_curve, options.animation_frames_per_second);
 							}
 							else
 							{
 								for (ULONG i = 0; i < times.size(); i++)
 								{
-									float time = times[i] * FRAMES_PER_SECOND;
+									float time = times[i] * options.animation_frames_per_second;
 									x_curve.AddKey(time, values[data_length * i + data_shift], curve_type);
 									y_curve.AddKey(time, values[data_length * i + data_shift + 1], curve_type);
 									z_curve.AddKey(time, values[data_length * i + data_shift + 2], curve_type);

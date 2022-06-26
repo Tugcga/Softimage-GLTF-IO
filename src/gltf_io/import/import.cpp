@@ -56,7 +56,7 @@ void process_node(XSI::ProgressBar &bar,
 	const int node_index, 
 	XSI::X3DObject &parent, 
 	std::unordered_map<int, XSI::Material> &material_map, 
-	const ImportMeshOptions &mesh_options,
+	const ImportOptions &options,
 	std::unordered_map<ULONG, XSI::X3DObject> &nodes_map,
 	std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> &envelopes,
 	const bool is_import_cameras)
@@ -78,7 +78,7 @@ void process_node(XSI::ProgressBar &bar,
 		//this node contains the mesh
 		tinygltf::Mesh mesh = model.meshes[node.mesh];
 		std::unordered_map<ULONG, std::vector<float>> envelop_map; // key - deformer index in the skin property, value - array of weights for all vertices in the mesh (so, for subobjects we should extend these arrays)
-		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, envelop_map, mesh_options);  // return last primitivefrom the mesh
+		next_parent = import_mesh(model, mesh, node_name, local_tfm, parent, material_map, envelop_map, options);  // return last primitivefrom the mesh
 
 		if (node.skin >= 0 && envelop_map.size() > 0)
 		{
@@ -105,7 +105,7 @@ void process_node(XSI::ProgressBar &bar,
 
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		process_node(bar, model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, mesh_options, nodes_map, envelopes, is_import_cameras);
+		process_node(bar, model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, options, nodes_map, envelopes, is_import_cameras);
 	}
 }
 
@@ -117,7 +117,8 @@ bool import_gltf(const XSI::CString file_path,
 	const bool is_import_skin,
 	const bool is_import_materials,
 	const bool is_import_cameras,
-	const bool is_import_animations)
+	const bool is_import_animations,
+	const float animation_frames_per_second)
 {
 	XSI::ProgressBar bar = XSI::Application().GetUIToolkit().GetProgressBar();
 	bar.PutCancelEnabled(false);
@@ -147,13 +148,14 @@ bool import_gltf(const XSI::CString file_path,
 
 		const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 
-		ImportMeshOptions mesh_options
+		ImportOptions options
 		{
 			is_import_normals,
 			is_import_uvs,
 			is_import_colors,
 			is_import_shapes,
-			is_import_skin
+			is_import_skin,
+			animation_frames_per_second,
 		};
 
 		XSI::CString scene_name = scene.name.c_str();
@@ -201,7 +203,7 @@ bool import_gltf(const XSI::CString file_path,
 		xsi_root.AddNull(scene_name, node_null);
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
-			process_node(bar, model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, mesh_options, nodes_map, envelopes, is_import_cameras);
+			process_node(bar, model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, options, nodes_map, envelopes, is_import_cameras);
 		}
 
 		//after scene parsing we can setup the skin for each object
@@ -218,7 +220,7 @@ bool import_gltf(const XSI::CString file_path,
 
 		if (is_import_animations)
 		{
-			import_animation(bar, model, nodes_map);
+			import_animation(bar, model, nodes_map, options);
 		}
 
 		nodes_map.clear();

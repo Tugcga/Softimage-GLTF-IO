@@ -64,6 +64,9 @@ def GLTFImportOpen_Execute():
     param = prop.AddParameter3("import_animations", constants.siBool, False, False, False)
     param.Animatable = False
 
+    param = prop.AddParameter2("animation_frames_per_second", constants.siFloat, 30.0, 0.0, 999999.0, 1.0, 60.0)
+    param.Animatable = False
+
     layout = prop.PPGLayout
     layout.Clear()
     layout.AddGroup("File Path")
@@ -86,9 +89,28 @@ def GLTFImportOpen_Execute():
     layout.AddItem("import_materials", "Materials")
     layout.AddItem("import_cameras", "Cameras")
     layout.AddItem("import_animations", "Animations")
+    layout.AddItem("animation_frames_per_second", "Frames in Second")
     layout.EndGroup()
 
-    property_keys = ["import_normals", "import_uvs", "import_colors", "import_shapes", "import_skin", "import_materials", "import_cameras", "import_animations"]
+    layout.Language = "Python"
+    layout.Logic = '''
+def update(prop):
+    import_animations = prop.Parameters("import_animations").Value
+    if import_animations:
+        prop.Parameters("animation_frames_per_second").ReadOnly = False
+    else:
+        prop.Parameters("animation_frames_per_second").ReadOnly = True
+
+def OnInit():
+    prop = PPG.Inspected(0)
+    update(prop)
+
+def import_animations_OnChanged():
+    prop = PPG.Inspected(0)
+    update(prop)
+'''
+
+    property_keys = ["import_normals", "import_uvs", "import_colors", "import_shapes", "import_skin", "import_materials", "import_cameras", "import_animations", "animation_frames_per_second"]
     # read previous import parameters
     global prev_import_params
     if prev_import_params is not None:
@@ -110,7 +132,8 @@ def GLTFImportOpen_Execute():
                     prop.Parameters("import_skin").Value,
                     prop.Parameters("import_materials").Value,
                     prop.Parameters("import_cameras").Value,
-                    prop.Parameters("import_animations").Value)
+                    prop.Parameters("import_animations").Value,
+                    prop.Parameters("animation_frames_per_second").Value)
             else:
                 app.LogMessage("Select *.gltf or *.glb file", constants.siWarning)
     # save import parameters to the dictionary
