@@ -300,6 +300,12 @@ void write_shapes_data(tinygltf::Model &model, tinygltf::Primitive &prim, std::v
 
 			shape_byte_vector.clear();
 			shape_byte_vector.shrink_to_fit();
+			shape.clear();
+			shape.shrink_to_fit();
+			min_values.clear();
+			min_values.shrink_to_fit();
+			max_values.clear();
+			max_values.shrink_to_fit();
 		}
 	}
 }

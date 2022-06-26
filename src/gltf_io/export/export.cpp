@@ -22,7 +22,7 @@ int export_iterate(XSI::CRef &obj,
 	ULONG xsi_id;
 	XSI::CRefArray xsi_children(0);
 	bool is_correct = false;
-	if (obj_class == "Null" || obj_class == "X3DObject" || obj_class == "Model" || obj_class == "CameraRig")
+	if (obj_class == "Null" || obj_class == "X3DObject" || obj_class == "Model" || obj_class == "CameraRig" || obj_class == "ChainRoot" || obj_class == "ChainBone" || obj_class == "ChainEffector")
 	{
 		XSI::X3DObject xsi_obj(obj);
 		xsi_id = xsi_obj.GetObjectID();
@@ -85,6 +85,9 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 		true, // embed_images
 		false, // embed_buffers
 		output_path, // output_path
+		30,  // animation_frames_per_second
+		1,  // animation_start
+		10,  // animation_end
 	};
 
 	std::set<ULONG> exported_objects;  // store here id-s of exported objects
@@ -114,6 +117,12 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	for (ULONG i = 0; i < envelope_meshes.size(); i++)
 	{
 		export_skin(model, i, envelope_meshes[i], object_to_node);
+	}
+
+	//export animations
+	if (options.animation_end - options.animation_start >= 0)
+	{
+		export_animation(model, options, object_to_node);
 	}
 
 	scene.name = file_name_from_path(file_path).GetAsciiString();

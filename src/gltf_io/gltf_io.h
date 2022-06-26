@@ -29,3 +29,4 @@ void export_mesh(tinygltf::Node& node, tinygltf::Model& model, XSI::X3DObject& x
 tinygltf::Node export_node(XSI::X3DObject& xsi_object, bool& is_correct, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map, std::vector<XSI::X3DObject>& envelope_meshes, std::unordered_map<ULONG, ULONG>& object_to_node, tinygltf::Model& model);
 tinygltf::Node export_camera(const XSI::Camera& camera, bool& is_correct, tinygltf::Model& model);
 void export_transform(const XSI::MATH::CTransformation& xsi_tfm, tinygltf::Node& node);
+void export_animation(tinygltf::Model &model, const ExportOptions& options, const std::unordered_map<ULONG, ULONG>& object_to_node);

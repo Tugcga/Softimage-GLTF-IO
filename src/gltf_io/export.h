@@ -12,6 +12,9 @@ struct ExportOptions
 	bool embed_images;
 	bool embed_buffers;
 	XSI::CString output_path;
+	float animation_frames_per_second;
+	int animation_start;  // in frames
+	int animation_end;
 };
 
 struct Vertex
