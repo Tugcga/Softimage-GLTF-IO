@@ -11,6 +11,9 @@
 #include <xsi_command.h>
 #include <xsi_argument.h>
 #include <xsi_selection.h>
+#include <xsi_project.h>
+#include <xsi_scene.h>
+#include <xsi_model.h>
 
 #include "gltf_io/export.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -118,6 +121,22 @@ SICALLBACK GLTFExport_Init(XSI::CRef& in_ctxt)
 	XSI::CValueArray empty_array(0);
 	args.Add("objects", empty_array);
 	args.Add("file_path");
+	args.Add("embed_images", false);
+	args.Add("embed_buffers", false);
+	//mesh
+	args.Add("export_uvs", true);
+	args.Add("export_colors", true);
+	args.Add("export_shapes", true);
+	args.Add("export_skin", true);
+	//scene
+	args.Add("export_materials", true);
+	args.Add("export_cameras", true);
+	args.Add("export_animations", true);
+	args.Add("animation_frames_per_second", 30.0);
+	args.Add("animation_start", 1);
+	args.Add("animation_end", 100);
+	//other settings
+	args.Add("export_hide", false);
 	
 	return XSI::CStatus::OK;
 }
@@ -128,17 +147,49 @@ SICALLBACK GLTFExport_Execute(XSI::CRef& in_ctxt)
 	XSI::CValueArray args = ctxt.GetAttribute("Arguments");
 
 	//extract input arguments
-	XSI::CString file_path = args[0];
+	XSI::CRefArray in_objects = args[0];
+	XSI::CString file_path = args[1];
+	bool embed_images = args[2];
+	bool embed_buffers = args[3];
+	bool export_uvs = args[4];
+	bool export_colors = args[5];
+	bool export_shapes = args[6];
+	bool export_skin = args[7];
+	bool export_materials = args[8];
+	bool export_cameras = args[9];
+	bool export_animations = args[10];
+	float animation_frames_per_second = args[11];
+	int animation_start = args[12];
+	int animation_end = args[13];
+	bool export_hide = args[14];
 
-	if (true || file_path.Length() > 0)
+	if (in_objects.GetCount() > 0)
 	{
-		XSI::Selection selection = XSI::Application().GetSelection();
-		XSI::CRefArray objects = selection.GetArray();
-		export_gltf("D:\\Graphic\\For Softimage\\Projects\\Softimage GLTF\\Models\\export\\exported_model.gltf", objects);
+		if (file_path.Length() > 0)
+		{
+			export_gltf(file_path, in_objects,
+				embed_images,
+				embed_buffers,
+				export_uvs,
+				export_colors,
+				export_shapes,
+				export_skin,
+				export_materials,
+				export_cameras,
+				export_animations,
+				animation_frames_per_second,
+				animation_start,
+				animation_end,
+				export_hide);
+		}
+		else
+		{
+			log_message("To export scene to GLTF/GLB file select a valid file path", XSI::siWarningMsg);
+		}
 	}
 	else
 	{
-		log_message("To export scene to GLTF/GLB file select a valid file path", XSI::siWarningMsg);
+		log_message("The array of objects for export is empty, nothing to do", XSI::siWarningMsg);
 	}
 
 	return XSI::CStatus::OK;

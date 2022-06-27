@@ -9,12 +9,19 @@ bool is_arrays_coincide(const std::vector<float>& array_a, const std::vector<flo
 
 struct ExportOptions
 {
-	bool embed_images;
-	bool embed_buffers;
 	XSI::CString output_path;
+	bool is_export_uvs;
+	bool is_export_colors;
+	bool is_export_shapes;
+	bool is_export_skin;
+	bool is_export_materials;
+	bool is_export_cameras;
+	bool is_export_animations;
 	float animation_frames_per_second;
 	int animation_start;  // in frames
 	int animation_end;
+	bool export_hide;
+	int scene_root_id;
 };
 
 struct Vertex
@@ -59,7 +66,20 @@ struct Vertex
 	}
 };
 
-bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects);
+bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects,
+	bool embed_images,
+	bool embed_buffers,
+	bool export_uvs,
+	bool export_colors,
+	bool export_shapes,
+	bool export_skin,
+	bool export_materials,
+	bool export_cameras,
+	bool export_animations,
+	float animation_frames_per_second,
+	int animation_start,
+	int animation_end,
+	bool export_hide);
 
 int add_data_to_buffer(tinygltf::Model& model, std::vector<unsigned char>& byte_vector, ULONG data_count, const bool is_indices, const bool ignore_target, const int component_type, const int data_type, std::vector<double> min_value, std::vector<double> max_value);
 int add_triangle_indices_to_buffer(tinygltf::Model& model, const std::vector<unsigned int>& data, const int component_type, const int data_type);

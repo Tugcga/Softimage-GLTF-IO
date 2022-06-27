@@ -6,7 +6,7 @@
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
 
-tinygltf::Node export_node(XSI::X3DObject& xsi_object,
+tinygltf::Node export_node(XSI::ProgressBar& bar, XSI::X3DObject& xsi_object,
 	bool& is_correct,
 	const ExportOptions& options,
 	std::unordered_map<ULONG, ULONG> &materials_map, 
@@ -44,7 +44,7 @@ tinygltf::Node export_node(XSI::X3DObject& xsi_object,
 	
 	if (xsi_object.GetType() == "polymsh")
 	{
-		export_mesh(new_node, model, xsi_object, options, materials_map, textures_map, envelope_meshes);
+		export_mesh(new_node, model, bar, xsi_object, options, materials_map, textures_map, envelope_meshes);
 	}
 
 	is_correct = true;

@@ -6,6 +6,7 @@
 #include <xsi_imageclip2.h>
 #include <xsi_utils.h>
 #include <xsi_image.h>
+#include <xsi_progressbar.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -127,13 +128,16 @@ int export_texture(tinygltf::Model& model, const ExportOptions& options, const X
 	return -1;
 }
 
-void export_material(tinygltf::Model& model, XSI::Material& xsi_material, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map)
+void export_material(tinygltf::Model& model, XSI::ProgressBar& bar, XSI::Material& xsi_material, const ExportOptions& options, std::unordered_map<ULONG, ULONG>& materials_map, std::unordered_map<ULONG, ULONG> &textures_map)
 {
 	//may be this material already exported
 	ULONG material_id = xsi_material.GetObjectID();
+
 	auto m_it = materials_map.find(material_id);
 	if (m_it == materials_map.end())
 	{//this material is new
+		bar.PutStatusText("Material: " + xsi_material.GetFullName());
+
 		XSI::CRefArray first_level_shaders = xsi_material.GetShaders();
 		std::vector<XSI::ShaderParameter> surface_ports = get_root_shader_parameter(first_level_shaders, "surface");
 		if (surface_ports.size() > 0)

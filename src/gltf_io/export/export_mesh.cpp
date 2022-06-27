@@ -9,6 +9,7 @@
 #include <xsi_material.h>
 #include <xsi_vector3f.h>
 #include <xsi_envelopeweight.h>
+#include <xsi_progressbar.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -312,6 +313,7 @@ void write_shapes_data(tinygltf::Model &model, tinygltf::Primitive &prim, std::v
 
 void export_mesh(tinygltf::Node &node, 
 	tinygltf::Model& model, 
+	XSI::ProgressBar& bar,
 	XSI::X3DObject& xsi_object, 
 	const ExportOptions& options, 
 	std::unordered_map<ULONG, ULONG>& materials_map, 
@@ -339,8 +341,12 @@ void export_mesh(tinygltf::Node &node,
 	for (ULONG i = 0; i < materials.GetCount(); i++)
 	{
 		XSI::Material material(materials[i]);
-		export_material(model, material, options, materials_map, textures_map);
+		if (options.is_export_materials)
+		{
+			export_material(model, bar, material, options, materials_map, textures_map);
+		}
 	}
+	bar.PutStatusText("Object: " + xsi_object.GetFullName());
 
 	//read geometry data
 	XSI::CLongArray triangle_vertices;
@@ -361,7 +367,7 @@ void export_mesh(tinygltf::Node &node,
 
 	//read mesh uvs
 	XSI::CRefArray xsi_uvs = xsi_acc.GetUVs();
-	ULONG uvs_count = xsi_uvs.GetCount();
+	ULONG uvs_count = options.is_export_uvs ? xsi_uvs.GetCount() : 0;
 	std::vector<float> uvs_array(uvs_count * 2 * nodes_count);  // contains all uv coordinates for nodes, at first data for the first uv (for all nodes), then for the second and so on
 	XSI::CFloatArray uv;
 	for (ULONG i = 0; i < uvs_count; i++)
@@ -378,7 +384,7 @@ void export_mesh(tinygltf::Node &node,
 
 	//in the same way read vertex colors
 	XSI::CRefArray xsi_colors = xsi_acc.GetVertexColors();
-	ULONG colors_count = xsi_colors.GetCount();
+	ULONG colors_count = options.is_export_colors ? xsi_colors.GetCount() : 0;
 	std::vector<float> colors_array(colors_count * 4 * nodes_count);  // we will store 4 colors
 	XSI::CFloatArray colors;
 	for (ULONG i = 0; i < colors_count; i++)
@@ -396,7 +402,7 @@ void export_mesh(tinygltf::Node &node,
 
 	//envelope weights
 	XSI::CRefArray xsi_envelopes = xsi_acc.GetEnvelopeWeights();
-	bool export_envelope = xsi_envelopes.GetCount() > 0;
+	bool export_envelope = xsi_envelopes.GetCount() > 0 && options.is_export_skin;
 	XSI::CFloatArray envelope_weights;
 	ULONG envelope_deformers_count = 0;
 	//we should export only the first envelope data
@@ -413,7 +419,7 @@ void export_mesh(tinygltf::Node &node,
 
 	//shapes
 	XSI::CRefArray xsi_shapes = xsi_acc.GetShapeKeys();
-	ULONG shapes_count = xsi_shapes.GetCount();
+	ULONG shapes_count = options.is_export_shapes ? xsi_shapes.GetCount() : 0;
 	std::vector<float> shapes_array(shapes_count * 3 * vertex_count);
 	for (ULONG i = 0; i < shapes_count; i++)
 	{

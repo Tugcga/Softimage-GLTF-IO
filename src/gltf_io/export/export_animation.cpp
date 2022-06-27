@@ -3,6 +3,7 @@
 #include <xsi_projectitem.h>
 #include <xsi_kinematics.h>
 #include <xsi_parameter.h>
+#include <xsi_progressbar.h>
 
 #include "../gltf_io.h"
 #include "../../utilities/utilities.h"
@@ -97,7 +98,7 @@ void write_parameters(tinygltf::Model &model,
 	}
 }
 
-void export_animation(tinygltf::Model &model, const ExportOptions &options, const std::unordered_map<ULONG, ULONG> &object_to_node)
+void export_animation(tinygltf::Model &model, XSI::ProgressBar& bar, const ExportOptions &options, const std::unordered_map<ULONG, ULONG> &object_to_node)
 {
 	//create array of times
 	float step_time = 1.0f / options.animation_frames_per_second;
@@ -125,8 +126,11 @@ void export_animation(tinygltf::Model &model, const ExportOptions &options, cons
 		//get Softimage object
 		XSI::ProjectItem xsi_item = XSI::Application().GetObjectFromID(xsi_id);
 		XSI::X3DObject xsi_object(xsi_item);
+
 		if (xsi_object.IsValid())
 		{
+			bar.PutStatusText("Animation: " + xsi_object.GetFullName());
+
 			XSI::KinematicState kine = xsi_object.GetKinematics().GetLocal();
 			XSI::CParameterRefArray kine_params = kine.GetParameters();
 

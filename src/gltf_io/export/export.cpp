@@ -1,14 +1,32 @@
 #include <set>
+#include <ctime>
 
 #include <xsi_application.h>
 #include <xsi_x3dobject.h>
 #include <xsi_camera.h>
+#include <xsi_project.h>
+#include <xsi_scene.h>
+#include <xsi_model.h>
+#include <xsi_progressbar.h>
+#include <xsi_uitoolkit.h>
 
 #include "../gltf_io.h"
 #include "../export.h"
 #include "../../utilities/utilities.h"
 
-int export_iterate(XSI::CRef &obj, 
+bool is_object_visible(XSI::X3DObject& xsi_object)
+{
+	XSI::Property visibility_prop;
+	xsi_object.GetPropertyFromName("visibility", visibility_prop);
+	if (visibility_prop.IsValid())
+	{
+		return visibility_prop.GetParameterValue("viewvis");
+	}
+	return false;
+}
+
+int export_iterate(XSI::ProgressBar &bar,
+	XSI::CRef &obj,
 	const ExportOptions &options, 
 	std::set<ULONG> &exported_objects, 
 	std::unordered_map<ULONG, ULONG> &materials_map, 
@@ -22,52 +40,57 @@ int export_iterate(XSI::CRef &obj,
 	ULONG xsi_id;
 	XSI::CRefArray xsi_children(0);
 	bool is_correct = false;
-	if (obj_class == "Null" || obj_class == "X3DObject" || obj_class == "Model" || obj_class == "CameraRig" || obj_class == "ChainRoot" || obj_class == "ChainBone" || obj_class == "ChainEffector")
-	{
-		XSI::X3DObject xsi_obj(obj);
-		xsi_id = xsi_obj.GetObjectID();
-		if (exported_objects.find(xsi_id) == exported_objects.end())
-		{
-			tinygltf::Node new_node = export_node(xsi_obj, is_correct, options, materials_map, textures_map, envelope_meshes, object_to_node, model);
-			exported_objects.insert(xsi_id);
-			if (is_correct)
-			{
-				node_index = model.nodes.size();
-				model.nodes.push_back(new_node);
-				object_to_node[xsi_id] = node_index;
-			}
+	XSI::X3DObject xsi_obj(obj);
 
-			xsi_children = xsi_obj.GetChildren();
-		}
-	}
-	else if (obj_class == "Camera")
+	bar.PutStatusText((obj_class == "Camera" ? "Camera: " : "Object: ") + xsi_obj.GetFullName());
+	
+	if (xsi_obj.IsValid())
 	{
-		XSI::Camera xsi_camera(obj);
-		xsi_id = xsi_camera.GetObjectID();
-		if (exported_objects.find(xsi_id) == exported_objects.end())
+		//check object visibility
+		bool is_visible = is_object_visible(xsi_obj);
+		if ((!is_visible && options.export_hide) || is_visible || xsi_obj.GetObjectID() == options.scene_root_id)
 		{
-			tinygltf::Node new_node = export_camera(xsi_camera, is_correct, model);
-			exported_objects.insert(xsi_id);
-			if (is_correct)
+			if (obj_class == "Camera" && options.is_export_cameras)
 			{
-				node_index = model.nodes.size();
-				model.nodes.push_back(new_node);
+				XSI::Camera xsi_camera(obj);
+				xsi_id = xsi_camera.GetObjectID();
+				if (exported_objects.find(xsi_id) == exported_objects.end())
+				{
+					tinygltf::Node new_node = export_camera(xsi_camera, is_correct, model);
+					exported_objects.insert(xsi_id);
+					if (is_correct)
+					{
+						node_index = model.nodes.size();
+						model.nodes.push_back(new_node);
+					}
+					xsi_children = xsi_camera.GetChildren();
+				}
 			}
-			xsi_children = xsi_camera.GetChildren();
-			
+			else
+			{
+				xsi_id = xsi_obj.GetObjectID();
+				if (exported_objects.find(xsi_id) == exported_objects.end())
+				{
+					tinygltf::Node new_node = export_node(bar, xsi_obj, is_correct, options, materials_map, textures_map, envelope_meshes, object_to_node, model);
+					exported_objects.insert(xsi_id);
+					if (is_correct)
+					{
+						node_index = model.nodes.size();
+						model.nodes.push_back(new_node);
+						object_to_node[xsi_id] = node_index;
+					}
+
+					xsi_children = xsi_obj.GetChildren();
+				}
+			}
 		}
 	}
-	else
-	{
-		log_message("unknown object class " + obj_class);
-	}
-	//all other object are unsopported, skip it
 
 	//next iterate throw children subobjects
 	for (ULONG i = 0; i < xsi_children.GetCount(); i++)
 	{
 		XSI::CRef child = xsi_children[i];
-		int child_index = export_iterate(child, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
+		int child_index = export_iterate(bar, child, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
 		if (is_correct && child_index >= 0)
 		{
 			model.nodes[node_index].children.push_back(child_index);
@@ -77,17 +100,47 @@ int export_iterate(XSI::CRef &obj,
 	return node_index;
 }
 
-bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
+bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects,
+	bool embed_images,
+	bool embed_buffers,
+	bool is_export_uvs,
+	bool is_export_colors,
+	bool is_export_shapes,
+	bool is_export_skin,
+	bool is_export_materials,
+	bool is_export_cameras,
+	bool is_export_animations,
+	float animation_frames_per_second,
+	int animation_start,
+	int animation_end,
+	bool export_hide)
 {
+	XSI::ProgressBar bar = XSI::Application().GetUIToolkit().GetProgressBar();
+	bar.PutCancelEnabled(false);
+	bar.PutValue(0);
+	bar.PutVisible(true);
+	double start_time = clock();
+
+	XSI::Project project = XSI::Application().GetActiveProject();
+	XSI::Scene scnene = project.GetActiveScene();
+	XSI::Model root = scnene.GetRoot();
+
 	XSI::CString output_path = file_path_to_folder(file_path);  // path without last //
 	ExportOptions options
 	{
-		true, // embed_images
-		false, // embed_buffers
-		output_path, // output_path
-		30,  // animation_frames_per_second
-		1,  // animation_start
-		10,  // animation_end
+		output_path,
+		is_export_uvs,
+		is_export_colors,
+		is_export_shapes,
+		is_export_skin,
+		is_export_materials,
+		is_export_cameras,
+		is_export_animations,
+		animation_frames_per_second,
+		animation_start,
+		animation_end,
+		export_hide,
+		root.GetObjectID(), //scene_root_id
 	};
 
 	std::set<ULONG> exported_objects;  // store here id-s of exported objects
@@ -106,7 +159,7 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	for (ULONG i = 0; i < objects.GetCount(); i++)
 	{
 		XSI::CRef obj = objects[i];
-		int scene_node_index = export_iterate(obj, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
+		int scene_node_index = export_iterate(bar, obj, options, exported_objects, materials_map, textures_map, envelope_meshes, object_to_node, model);
 		if (scene_node_index >= 0)
 		{
 			scene.nodes.push_back(scene_node_index);
@@ -114,15 +167,19 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	}
 
 	//export second part of the skin
-	for (ULONG i = 0; i < envelope_meshes.size(); i++)
+	if (options.is_export_skin)
 	{
-		export_skin(model, i, envelope_meshes[i], object_to_node);
+		for (ULONG i = 0; i < envelope_meshes.size(); i++)
+		{
+			bar.PutStatusText("Skin: " + envelope_meshes[i].GetFullName());
+			export_skin(model, i, envelope_meshes[i], object_to_node);
+		}
 	}
 
 	//export animations
-	if (options.animation_end - options.animation_start >= 0)
+	if (options.is_export_animations && options.animation_end - options.animation_start >= 0)
 	{
-		export_animation(model, options, object_to_node);
+		export_animation(model, bar, options, object_to_node);
 	}
 
 	scene.name = file_name_from_path(file_path).GetAsciiString();
@@ -151,8 +208,8 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	std::string path_str = file_path.GetAsciiString();
 	std::string ext = get_file_extension(path_str);
 	gltf.WriteGltfSceneToFile(&model, path_str,
-		options.embed_images, // embedImages
-		options.embed_buffers, // embedBuffers
+		embed_images,
+		embed_buffers,
 		true, // pretty print
 		ext == "glb"); // write binary
 
@@ -163,6 +220,12 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects)
 	envelope_meshes.clear();
 	envelope_meshes.shrink_to_fit();
 	object_to_node.clear();
+
+	bar.PutVisible(false);
+
+	double finish_time = clock();
+	double time = (finish_time - start_time) / CLOCKS_PER_SEC;
+	log_message("Export GLTF/GLB time: " + XSI::CString(time) + " sec.");
 	
 	return true;
 }
