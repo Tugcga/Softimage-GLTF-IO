@@ -84,6 +84,7 @@ void process_node(XSI::ProgressBar &bar,
 		{
 			envelopes.push_back(std::make_tuple(node.skin, next_parent, envelop_map));
 		}
+
 	}
 	else if (node.camera >= 0 && node.camera < model.cameras.size() && is_import_cameras)
 	{
@@ -122,6 +123,8 @@ bool import_gltf(const XSI::CString file_path,
 {
 	XSI::ProgressBar bar = XSI::Application().GetUIToolkit().GetProgressBar();
 	bar.PutCancelEnabled(false);
+	bar.PutVisible(true);
+	bar.PutStatusText("Parsing file");
 
 	tinygltf::Model model;
 	bool is_load = load_model(model, file_path.GetAsciiString());
@@ -144,7 +147,6 @@ bool import_gltf(const XSI::CString file_path,
 		}
 		bar.PutMaximum(steps);
 		bar.PutValue(0);
-		bar.PutVisible(true);
 
 		const tinygltf::Scene& scene = model.scenes[model.defaultScene > -1 ? model.defaultScene : 0];
 

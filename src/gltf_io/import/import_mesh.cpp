@@ -21,53 +21,62 @@
 
 std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, const ULONG first_index)
 {
-	const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
-	int component_type = polygon_accessor.componentType;
+	if (primitive.indices >= 0)
+	{
+		const tinygltf::Accessor& polygon_accessor = model.accessors[primitive.indices];
+		int component_type = polygon_accessor.componentType;
+		std::vector<LONG> to_return(polygon_accessor.count);
 
-	std::vector<LONG> to_return(polygon_accessor.count);
+		const tinygltf::BufferView& buffer_view = model.bufferViews[polygon_accessor.bufferView];
+		const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
 
-	const tinygltf::BufferView& buffer_view = model.bufferViews[polygon_accessor.bufferView];
-	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
+		if (component_type == 5123)
+		{
+			const unsigned short* polygons = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			{
+				to_return[i] = polygons[i] + first_index;
+			}
+		}
+		else if (component_type == 5120)
+		{
+			const signed char* polygons = reinterpret_cast<const signed char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			{
+				to_return[i] = polygons[i] + first_index;
+			}
+		}
+		else if (component_type == 5121)
+		{
+			const unsigned char* polygons = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			{
+				to_return[i] = polygons[i] + first_index;
+			}
+		}
+		else if (component_type == 5122)
+		{
+			const signed short* polygons = reinterpret_cast<const signed short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			{
+				to_return[i] = polygons[i] + first_index;
+			}
+		}
+		else if (component_type == 5125)
+		{
+			const unsigned int* polygons = reinterpret_cast<const unsigned int*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
+			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			{
+				to_return[i] = polygons[i] + first_index;
+			}
+		}
+		else
+		{
+			std::vector<LONG> empty(0);
+			return empty;
+		}
 
-	if (component_type == 5123)
-	{
-		const unsigned short* polygons = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-		for (size_t i = 0; i < polygon_accessor.count; ++i)
-		{
-			to_return[i] = polygons[i] + first_index;
-		}
-	}
-	else if (component_type == 5120)
-	{
-		const signed char* polygons = reinterpret_cast<const signed char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-		for (size_t i = 0; i < polygon_accessor.count; ++i)
-		{
-			to_return[i] = polygons[i] + first_index;
-		}
-	}
-	else if (component_type == 5121)
-	{
-		const unsigned char* polygons = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-		for (size_t i = 0; i < polygon_accessor.count; ++i)
-		{
-			to_return[i] = polygons[i] + first_index;
-		}
-	}
-	else if (component_type == 5122)
-	{
-		const signed short* polygons = reinterpret_cast<const signed short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-		for (size_t i = 0; i < polygon_accessor.count; ++i)
-		{
-			to_return[i] = polygons[i] + first_index;
-		}
-	}
-	else if (component_type == 5125)
-	{
-		const unsigned int* polygons = reinterpret_cast<const unsigned int*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-		for (size_t i = 0; i < polygon_accessor.count; ++i)
-		{
-			to_return[i] = polygons[i] + first_index;
-		}
+		return to_return;
 	}
 	else
 	{
@@ -75,7 +84,6 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		return empty;
 	}
 
-	return to_return;
 }
 
 std::vector<double> get_double_buffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor)
@@ -83,6 +91,7 @@ std::vector<double> get_double_buffer(const tinygltf::Model& model, const tinygl
 	int32_t components = tinygltf::GetNumComponentsInType(accessor.type);
 
 	int component_type = accessor.componentType;
+
 	if (component_type != 5126)
 	{
 		// this buffer should contains float values, but it actual contains something different
@@ -238,6 +247,7 @@ XSI::X3DObject import_mesh(const tinygltf::Model& model,
 		int position_attr_index = primitive.attributes["POSITION"];
 		const tinygltf::Accessor& position_accessor = model.accessors[position_attr_index];
 		std::vector<double> positions = get_double_buffer(model, position_accessor);
+
 		if (positions.size() == 0)
 		{
 			//something wrong here, because buffer with point positions is empty (the type of data is not float)
