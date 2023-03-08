@@ -30,44 +30,50 @@ std::vector<LONG> get_polygon_inidices(const tinygltf::Model& model, const tinyg
 		const tinygltf::BufferView& buffer_view = model.bufferViews[polygon_accessor.bufferView];
 		const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
 
-		if (component_type == 5123)
+		const size_t count = polygon_accessor.count;
+
+		const uint32_t component_size = tinygltf::GetComponentSizeInBytes(component_type);
+		const size_t byte_stride = buffer_view.byteStride == 0 ? component_size : buffer_view.byteStride;
+		const size_t index_stride = byte_stride / component_size;
+
+		if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 		{
 			const unsigned short* polygons = reinterpret_cast<const unsigned short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			for (size_t i = 0; i < count; ++i)
 			{
-				to_return[i] = polygons[i] + first_index;
+				to_return[i] = polygons[i * index_stride] + first_index;
 			}
 		}
-		else if (component_type == 5120)
+		else if (component_type == TINYGLTF_COMPONENT_TYPE_BYTE)
 		{
 			const signed char* polygons = reinterpret_cast<const signed char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			for (size_t i = 0; i < count; ++i)
 			{
-				to_return[i] = polygons[i] + first_index;
+				to_return[i] = polygons[i * index_stride] + first_index;
 			}
 		}
-		else if (component_type == 5121)
+		else if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
 		{
 			const unsigned char* polygons = reinterpret_cast<const unsigned char*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			for (size_t i = 0; i < count; ++i)
 			{
-				to_return[i] = polygons[i] + first_index;
+				to_return[i] = polygons[i * index_stride] + first_index;
 			}
 		}
-		else if (component_type == 5122)
+		else if (component_type == TINYGLTF_COMPONENT_TYPE_SHORT)
 		{
 			const signed short* polygons = reinterpret_cast<const signed short*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			for (size_t i = 0; i < count; ++i)
 			{
-				to_return[i] = polygons[i] + first_index;
+				to_return[i] = polygons[i * index_stride] + first_index;
 			}
 		}
-		else if (component_type == 5125)
+		else if (component_type == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 		{
 			const unsigned int* polygons = reinterpret_cast<const unsigned int*>(&buffer.data[buffer_view.byteOffset + polygon_accessor.byteOffset]);
-			for (size_t i = 0; i < polygon_accessor.count; ++i)
+			for (size_t i = 0; i < count; ++i)
 			{
-				to_return[i] = polygons[i] + first_index;
+				to_return[i] = polygons[i * index_stride] + first_index;
 			}
 		}
 		else
@@ -104,12 +110,17 @@ std::vector<double> get_double_buffer(const tinygltf::Model& model, const tinygl
 
 	const tinygltf::BufferView& buffer_view = model.bufferViews[accessor.bufferView];
 	const tinygltf::Buffer& buffer = model.buffers[buffer_view.buffer];
+	const int count = accessor.count;
+	const uint32_t component_size = tinygltf::GetComponentSizeInBytes(component_type);
+	const size_t byte_stride = buffer_view.byteStride == 0 ? components * component_size : buffer_view.byteStride;
+	const size_t index_stride = byte_stride / component_size;  // buffer contains floats (not doubles), so, each value is only 4 bytes
+
 	const float* positions = reinterpret_cast<const float*>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);
 	for (size_t i = 0; i < accessor.count; ++i)
 	{
 		for (int32_t c = 0; c < components; c++)
 		{
-			to_return[components * i + c] = positions[i * components + c];
+			to_return[components * i + c] = positions[i * index_stride + c];
 		}
 	}
 
