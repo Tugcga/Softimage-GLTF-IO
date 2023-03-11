@@ -21,6 +21,7 @@ XSI::CString to_string(const std::vector<float>& array);
 XSI::CString to_string(const std::vector<int>& array);
 XSI::CString to_string(const std::vector<LONG>& array);
 XSI::CString to_string(const std::vector<ULONG>& array);
+XSI::CString to_string(const std::vector<size_t>& array);
 XSI::CString to_string(const std::vector<std::string>& array);
 XSI::CString to_string(const std::vector<unsigned char>& array);
 XSI::CString to_string(const std::vector<unsigned int>& array);
@@ -40,3 +41,5 @@ bool create_dir(const std::string& file_path);
 bool is_file_exists(const XSI::CString& file_path);
 XSI::CString file_path_to_folder(const XSI::CString& file_path);
 bool is_extension_supported(const std::string& ext);
+
+bool is_array_contains(const size_t value, const std::vector<size_t>& array);
