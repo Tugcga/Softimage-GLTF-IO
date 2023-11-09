@@ -62,6 +62,7 @@ SICALLBACK GLTFImport_Init(XSI::CRef& in_ctxt)
 	//scene
 	args.Add("import_materials", true);
 	args.Add("import_cameras", true);
+	args.Add("import_lights", true);
 	args.Add("import_animations", false);
 	args.Add("animation_frames_per_second", 30.0f);
 
@@ -83,9 +84,10 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 
 	bool import_materials = args[6];
 	bool import_cameras = args[7];
-	bool import_animations = args[8];
+	bool import_lights = args[8];
+	bool import_animations = args[9];
 
-	float animation_frames_per_second = args[9];
+	float animation_frames_per_second = args[10];
 
 	if (file_path.Length() > 0 && is_file_exists(file_path))
 	{
@@ -97,6 +99,7 @@ SICALLBACK GLTFImport_Execute(XSI::CRef& in_ctxt)
 			import_skin,
 			import_materials,
 			import_cameras,
+			import_lights,
 			import_animations,
 			animation_frames_per_second);
 	}
@@ -129,6 +132,8 @@ SICALLBACK GLTFExport_Init(XSI::CRef& in_ctxt)
 	args.Add("export_shapes", true);
 	args.Add("export_skin", true);
 	//scene
+	args.Add("export_meshes", true);
+	args.Add("export_lights", true);
 	args.Add("export_materials", true);
 	args.Add("export_cameras", true);
 	args.Add("export_animations", true);
@@ -155,13 +160,16 @@ SICALLBACK GLTFExport_Execute(XSI::CRef& in_ctxt)
 	bool export_colors = args[5];
 	bool export_shapes = args[6];
 	bool export_skin = args[7];
-	bool export_materials = args[8];
-	bool export_cameras = args[9];
-	bool export_animations = args[10];
-	float animation_frames_per_second = args[11];
-	int animation_start = args[12];
-	int animation_end = args[13];
-	bool export_hide = args[14];
+
+	bool export_meshes = args[8];
+	bool export_lights = args[9];
+	bool export_materials = args[10];
+	bool export_cameras = args[11];
+	bool export_animations = args[12];
+	float animation_frames_per_second = args[13];
+	int animation_start = args[14];
+	int animation_end = args[15];
+	bool export_hide = args[16];
 
 	if (in_objects.GetCount() > 0)
 	{
@@ -174,6 +182,8 @@ SICALLBACK GLTFExport_Execute(XSI::CRef& in_ctxt)
 				export_colors,
 				export_shapes,
 				export_skin,
+				export_meshes,
+				export_lights,
 				export_materials,
 				export_cameras,
 				export_animations,

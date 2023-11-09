@@ -14,6 +14,7 @@ export_mode_enum = [
 prev_import_params = None
 prev_export_params = None
 
+
 def XSILoadPlugin(in_reg):
     in_reg.Author = "Shekn"
     in_reg.Name = "GLTFMenusPlugin"
@@ -74,6 +75,9 @@ def GLTFImportOpen_Execute():
     param = prop.AddParameter3("import_cameras", constants.siBool, True, False, False)
     param.Animatable = False
 
+    param = prop.AddParameter3("import_lights", constants.siBool, True, False, False)
+    param.Animatable = False
+
     param = prop.AddParameter3("import_animations", constants.siBool, False, False, False)
     param.Animatable = False
 
@@ -93,6 +97,7 @@ def GLTFImportOpen_Execute():
     layout.AddGroup("Scene Items")
     layout.AddItem("import_materials", "Materials")
     layout.AddItem("import_cameras", "Cameras")
+    layout.AddItem("import_lights", "Lights")
     layout.EndGroup()
 
     layout.AddGroup("Animations")
@@ -126,7 +131,7 @@ def import_animations_OnChanged():
     update(prop)
 '''
 
-    property_keys = ["import_normals", "import_uvs", "import_colors", "import_shapes", "import_skin", "import_materials", "import_cameras", "import_animations", "animation_frames_per_second"]
+    property_keys = ["import_normals", "import_uvs", "import_colors", "import_shapes", "import_skin", "import_materials", "import_cameras", "import_lights", "import_animations", "animation_frames_per_second"]
     # read previous import parameters
     global prev_import_params
     if prev_import_params is not None:
@@ -141,15 +146,16 @@ def import_animations_OnChanged():
             path_ext = path_parts[-1]
             if path_ext in ["gltf", "glb"]:
                 app.GLTFImport(file_path,
-                    prop.Parameters("import_normals").Value,
-                    prop.Parameters("import_uvs").Value,
-                    prop.Parameters("import_colors").Value,
-                    prop.Parameters("import_shapes").Value,
-                    prop.Parameters("import_skin").Value,
-                    prop.Parameters("import_materials").Value,
-                    prop.Parameters("import_cameras").Value,
-                    prop.Parameters("import_animations").Value,
-                    prop.Parameters("animation_frames_per_second").Value)
+                               prop.Parameters("import_normals").Value,
+                               prop.Parameters("import_uvs").Value,
+                               prop.Parameters("import_colors").Value,
+                               prop.Parameters("import_shapes").Value,
+                               prop.Parameters("import_skin").Value,
+                               prop.Parameters("import_materials").Value,
+                               prop.Parameters("import_cameras").Value,
+                               prop.Parameters("import_lights").Value,
+                               prop.Parameters("import_animations").Value,
+                               prop.Parameters("animation_frames_per_second").Value)
             else:
                 app.LogMessage("Select *.gltf or *.glb file", constants.siWarning)
     # save import parameters to the dictionary
@@ -190,6 +196,12 @@ def GLTFExportOpen_Execute():
     param = prop.AddParameter2("export_mode", constants.siInt4, 0)
     param.Animatable = False
 
+    param = prop.AddParameter3("export_meshes", constants.siBool, True, False, False)
+    param.Animatable = False
+
+    param = prop.AddParameter3("export_lights", constants.siBool, True, False, False)
+    param.Animatable = False
+
     param = prop.AddParameter3("export_materials", constants.siBool, True, False, False)
     param.Animatable = False
 
@@ -211,7 +223,6 @@ def GLTFExportOpen_Execute():
     param = prop.AddParameter3("export_hide", constants.siBool, False, False, False)
     param.Animatable = False
 
-    
     layout = prop.PPGLayout
     layout.Clear()
     layout.AddGroup("Export")
@@ -227,10 +238,14 @@ def GLTFExportOpen_Execute():
     layout.AddGroup("Scene Items")
     layout.AddEnumControl("export_mode", export_mode_enum, "Export Mode")
     layout.AddRow()
+    layout.AddItem("export_meshes", "Meshes")
+    layout.AddItem("export_lights", "Lights")
+    layout.EndRow()
+    layout.AddRow()
     layout.AddItem("export_materials", "Materials")
     layout.AddItem("export_cameras", "Cameras")
-    layout.AddItem("export_hide", "Hide Objects")
     layout.EndRow()
+    layout.AddItem("export_hide", "Hide Objects")
     layout.EndGroup()
 
     layout.AddGroup("Animations")
@@ -252,7 +267,7 @@ def GLTFExportOpen_Execute():
     layout.AddItem("export_skin", "Envelope Skin")
     layout.EndRow()
     layout.EndGroup()
-    
+
     layout.Language = "Python"
     layout.Logic = '''
 def update(prop):
@@ -266,6 +281,18 @@ def update(prop):
         prop.Parameters("animation_start").ReadOnly = True
         prop.Parameters("animation_end").ReadOnly = True
 
+    export_meshes = prop.Parameters("export_meshes").Value
+    if export_meshes:
+        prop.Parameters("export_uvs").ReadOnly = False
+        prop.Parameters("export_colors").ReadOnly = False
+        prop.Parameters("export_shapes").ReadOnly = False
+        prop.Parameters("export_skin").ReadOnly = False
+    else:
+        prop.Parameters("export_uvs").ReadOnly = True
+        prop.Parameters("export_colors").ReadOnly = True
+        prop.Parameters("export_shapes").ReadOnly = True
+        prop.Parameters("export_skin").ReadOnly = True
+
 def OnInit():
     prop = PPG.Inspected(0)
     update(prop)
@@ -273,24 +300,29 @@ def OnInit():
 def export_animations_OnChanged():
     prop = PPG.Inspected(0)
     update(prop)
+
+def export_meshes_OnChanged():
+    prop = PPG.Inspected(0)
+    update(prop)
 '''
 
     property_keys = [
-    "embed_images", 
-    "embed_buffers", 
-    "export_uvs", 
-    "export_colors", 
-    "export_shapes", 
-    "export_skin", 
-    "export_mode", 
-    "export_materials", 
-    "export_cameras", 
-    "export_animations", 
-    "animation_frames_per_second", 
-    "animation_start", 
-    "animation_end", 
-    "export_hide"
-    ]
+        "embed_images",
+        "embed_buffers",
+        "export_uvs",
+        "export_colors",
+        "export_shapes",
+        "export_skin",
+        "export_mode",
+        "export_meshes",
+        "export_lights",
+        "export_materials",
+        "export_cameras",
+        "export_animations",
+        "animation_frames_per_second",
+        "animation_start",
+        "animation_end",
+        "export_hide"]
     # read previous import parameters
     global prev_export_params
     if prev_export_params is not None:
@@ -313,19 +345,21 @@ def export_animations_OnChanged():
                     objects = [app.ActiveProject.ActiveScene.Root]
 
                 app.GLTFExport(objects, file_path,
-                    prop.Parameters("embed_images").Value,
-                    prop.Parameters("embed_buffers").Value,
-                    prop.Parameters("export_uvs").Value,
-                    prop.Parameters("export_colors").Value,
-                    prop.Parameters("export_shapes").Value,
-                    prop.Parameters("export_skin").Value,
-                    prop.Parameters("export_materials").Value,
-                    prop.Parameters("export_cameras").Value,
-                    prop.Parameters("export_animations").Value,
-                    prop.Parameters("animation_frames_per_second").Value,
-                    prop.Parameters("animation_start").Value,
-                    prop.Parameters("animation_end").Value,
-                    prop.Parameters("export_hide").Value)
+                               prop.Parameters("embed_images").Value,
+                               prop.Parameters("embed_buffers").Value,
+                               prop.Parameters("export_uvs").Value,
+                               prop.Parameters("export_colors").Value,
+                               prop.Parameters("export_shapes").Value,
+                               prop.Parameters("export_skin").Value,
+                               prop.Parameters("export_meshes").Value,
+                               prop.Parameters("export_lights").Value,
+                               prop.Parameters("export_materials").Value,
+                               prop.Parameters("export_cameras").Value,
+                               prop.Parameters("export_animations").Value,
+                               prop.Parameters("animation_frames_per_second").Value,
+                               prop.Parameters("animation_start").Value,
+                               prop.Parameters("animation_end").Value,
+                               prop.Parameters("export_hide").Value)
             else:
                 app.LogMessage("Define *.gltf or *.glb output file", constants.siWarning)
     # save import parameters to the dictionary

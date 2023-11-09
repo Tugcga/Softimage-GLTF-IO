@@ -42,7 +42,7 @@ tinygltf::Node export_node(XSI::ProgressBar& bar, XSI::X3DObject& xsi_object,
 		}
 	}
 	
-	if (xsi_object.GetType() == "polymsh")
+	if (xsi_object.GetType() == "polymsh" && options.is_export_meshes)
 	{
 		export_mesh(new_node, model, bar, xsi_object, options, materials_map, textures_map, envelope_meshes);
 	}

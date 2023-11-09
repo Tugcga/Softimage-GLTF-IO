@@ -118,6 +118,7 @@ bool import_gltf(const XSI::CString file_path,
 	const bool is_import_skin,
 	const bool is_import_materials,
 	const bool is_import_cameras,
+	const bool is_import_lights,
 	const bool is_import_animations,
 	const float animation_frames_per_second)
 {

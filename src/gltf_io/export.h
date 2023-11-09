@@ -14,6 +14,8 @@ struct ExportOptions
 	bool is_export_colors;
 	bool is_export_shapes;
 	bool is_export_skin;
+	bool is_export_meshes;
+	bool is_export_lights;
 	bool is_export_materials;
 	bool is_export_cameras;
 	bool is_export_animations;
@@ -73,6 +75,8 @@ bool export_gltf(const XSI::CString &file_path, const XSI::CRefArray &objects,
 	bool export_colors,
 	bool export_shapes,
 	bool export_skin,
+	bool export_meshes,
+	bool export_lights,
 	bool export_materials,
 	bool export_cameras,
 	bool export_animations,
