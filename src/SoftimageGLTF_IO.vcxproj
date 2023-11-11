@@ -66,6 +66,7 @@
     <ClCompile Include="gltf_io\export\export_animation.cpp" />
     <ClCompile Include="gltf_io\export\export_camera.cpp" />
     <ClCompile Include="gltf_io\export\export_common.cpp" />
+    <ClCompile Include="gltf_io\export\export_light.cpp" />
     <ClCompile Include="gltf_io\export\export_material.cpp" />
     <ClCompile Include="gltf_io\export\export_mesh.cpp" />
     <ClCompile Include="gltf_io\export\export_node.cpp" />
@@ -75,6 +76,7 @@
     <ClCompile Include="gltf_io\import\import_animation.cpp" />
     <ClCompile Include="gltf_io\import\import_camera.cpp" />
     <ClCompile Include="gltf_io\import\import_common.cpp" />
+    <ClCompile Include="gltf_io\import\import_light.cpp" />
     <ClCompile Include="gltf_io\import\import_material.cpp" />
     <ClCompile Include="gltf_io\import\import_mesh.cpp" />
     <ClCompile Include="gltf_io\import\import_transform.cpp" />

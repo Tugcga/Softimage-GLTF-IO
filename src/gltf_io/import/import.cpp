@@ -59,7 +59,8 @@ void process_node(XSI::ProgressBar &bar,
 	const ImportOptions &options,
 	std::unordered_map<ULONG, XSI::X3DObject> &nodes_map,
 	std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> &envelopes,
-	const bool is_import_cameras)
+	const bool is_import_cameras,
+	const bool is_import_lighs)
 {
 	//calculate node transform and recreate root transform for the child nodes
 	XSI::MATH::CTransformation local_tfm = import_transform(node);
@@ -91,6 +92,11 @@ void process_node(XSI::ProgressBar &bar,
 		tinygltf::Camera camera = model.cameras[node.camera];
 		next_parent = import_camera(model, camera, node_name, local_tfm, parent);
 	}
+	else if (is_import_lighs && node.light >= 0 && node.light < model.lights.size())
+	{
+		tinygltf::Light light = model.lights[node.light];
+		next_parent = import_light(model, light, node_name, local_tfm, parent);
+	}
 
 	if (!next_parent.IsValid())
 	{
@@ -106,7 +112,7 @@ void process_node(XSI::ProgressBar &bar,
 
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		process_node(bar, model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, options, nodes_map, envelopes, is_import_cameras);
+		process_node(bar, model, model.nodes[node.children[i]], node.children[i], next_parent, material_map, options, nodes_map, envelopes, is_import_cameras, is_import_lighs);
 	}
 }
 
@@ -206,7 +212,7 @@ bool import_gltf(const XSI::CString file_path,
 		xsi_root.AddNull(scene_name, node_null);
 		for (size_t i = 0; i < scene.nodes.size(); ++i)
 		{
-			process_node(bar, model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, options, nodes_map, envelopes, is_import_cameras);
+			process_node(bar, model, model.nodes[scene.nodes[i]], scene.nodes[i], node_null, material_map, options, nodes_map, envelopes, is_import_cameras, is_import_lights);
 		}
 
 		//after scene parsing we can setup the skin for each object

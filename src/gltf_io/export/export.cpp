@@ -4,6 +4,7 @@
 #include <xsi_application.h>
 #include <xsi_x3dobject.h>
 #include <xsi_camera.h>
+#include <xsi_light.h>
 #include <xsi_project.h>
 #include <xsi_scene.h>
 #include <xsi_model.h>
@@ -42,7 +43,7 @@ int export_iterate(XSI::ProgressBar &bar,
 	bool is_correct = false;
 	XSI::X3DObject xsi_obj(obj);
 
-	bar.PutStatusText((obj_class == "Camera" ? "Camera: " : "Object: ") + xsi_obj.GetFullName());
+	bar.PutStatusText((obj_class == "Camera" ? "Camera: " : (obj_class == "Light" ? "Light: " : "Object: ")) + xsi_obj.GetFullName());
 	
 	if (xsi_obj.IsValid())
 	{
@@ -64,6 +65,23 @@ int export_iterate(XSI::ProgressBar &bar,
 						model.nodes.push_back(new_node);
 					}
 					xsi_children = xsi_camera.GetChildren();
+				}
+			}
+			else if (obj_class == "Light" && options.is_export_lights)
+			{
+				XSI::Light xsi_light(obj);
+				xsi_id = xsi_light.GetObjectID();
+				if (exported_objects.find(xsi_id) == exported_objects.end())
+				{
+					tinygltf::Node new_node = export_light(xsi_light, is_correct, model);
+					exported_objects.insert(xsi_id);
+					if (is_correct)
+					{
+						node_index = model.nodes.size();
+						model.nodes.push_back(new_node);
+						//object_to_node[xsi_id] = node_index;
+					}
+					xsi_children = xsi_light.GetChildren();
 				}
 			}
 			else
