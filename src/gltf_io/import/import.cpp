@@ -204,8 +204,8 @@ bool import_gltf(const XSI::CString file_path,
 		}
 
 		std::unordered_map<ULONG, XSI::X3DObject> nodes_map;  // key - node index, value - corresponding object in the Softimage
-		std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> envelopes(0);  // store here envelopes data for mesh object int he scene
-		//each array element is a 3-tuple (model skin index (use it for actual deformers indices), Softimage polygonmesh obect, envelop data map (key - deformer indices, value - weights for all vertices int he mesh))
+		std::vector<std::tuple<int, XSI::X3DObject, std::unordered_map<ULONG, std::vector<float>>>> envelopes(0);  // store here envelopes data for mesh object in the scene
+		//each array element is a 3-tuple (model skin index (use it for actual deformers indices), Softimage polygonmesh object, envelop data map (key - deformer indices, value - weights for all vertices int he mesh))
 
 		XSI::Model xsi_root = XSI::Application().GetActiveSceneRoot();
 		XSI::Null node_null;

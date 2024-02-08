@@ -54,6 +54,13 @@ void import_images(const tinygltf::Model& model, const XSI::Scene& scene, const 
 			XSI::Project xsi_project = XSI::Application().GetActiveProject();
 
 			XSI::CString image_name = img.name.c_str();
+			// image name in gltf can contains the whole path to the image
+			// so, filter it and extract only the name without full path
+			ULONG name_slash = image_name.ReverseFindString("\\");
+			if (name_slash < image_name.Length())
+			{
+				image_name = image_name.GetSubString(name_slash + 1);
+			}
 			if (image_name.Length() == 0)
 			{
 				image_name = "texture_" + XSI::CString(i);
